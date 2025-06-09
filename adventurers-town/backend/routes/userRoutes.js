@@ -26,6 +26,41 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// POST /api/users/:id/exercises
+router.post('/:id/exercises', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const { type, sets, reps, weight, date } = req.body;
+
+    // Validate required fields
+    if (!type || sets === undefined || reps === undefined || weight === undefined) {
+      return res.status(400).json({ error: 'Missing required exercise fields: type, sets, reps, weight' });
+    }
+
+    const newExercise = {
+      type, // This corresponds to exerciseName from the frontend
+      sets,
+      reps,
+      weight,
+      date: date ? new Date(date) : Date.now(),
+    };
+
+    user.exerciseHistory.push(newExercise);
+    await user.save();
+
+    // Return the newly added exercise
+    // The exercise is the last one in the array after push
+    res.status(200).json(user.exerciseHistory[user.exerciseHistory.length - 1]);
+  } catch (err) {
+    console.error('Error adding exercise:', err);
+    res.status(500).json({ error: 'Failed to add exercise' });
+  }
+});
+
 // POST /api/users/login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;

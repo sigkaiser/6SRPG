@@ -9,40 +9,7 @@ const sceneBackgrounds = {
 let currentUser = null;
 let exercises = [];
 
-// User data functions
-function saveUserData(username, data) {
-    try {
-        const jsonData = JSON.stringify(data);
-        // This is a placeholder for actual file saving logic,
-        // which is not directly possible in browser-side JavaScript.
-        // In a real application, this would involve sending data to a server
-        // or using browser storage APIs (localStorage, IndexedDB).
-        localStorage.setItem(`adventurers-town-user-${username}`, jsonData);
-        console.log(`User data for ${username} saved successfully.`);
-    } catch (error) {
-        console.error(`Error saving user data for ${username}:`, error);
-    }
-}
-
-function loadUserData(username) {
-    try {
-        // Placeholder for actual file loading logic.
-        const jsonData = localStorage.getItem(`adventurers-town-user-${username}`);
-        if (jsonData) {
-            const data = JSON.parse(jsonData);
-            console.log(`User data for ${username} loaded successfully.`);
-            return data;
-        } else {
-            console.log(`No data found for user ${username}.`);
-            return null;
-        }
-    } catch (error) {
-        console.error(`Error loading user data for ${username}:`, error);
-        return null;
-    }
-}
-
-// Exercise data functions
+// Exercise data functions (for general exercise list, not user-specific)
 function saveExercises(exerciseData) {
     try {
         const jsonData = JSON.stringify(exerciseData);
@@ -95,8 +62,10 @@ function getSceneUI(sceneKey) {
       return `
         <div class="button-group">
           <button class="menu-btn" onclick="showRegistrationForm()">Register</button>
+          <button class="menu-btn" onclick="showLoginForm()">Login</button>
           <button class="menu-btn" onclick="showGuildCard()">Player Card</button>
           <button class="menu-btn" onclick="showExerciseLogForm()">Log Exercise</button>
+          <button class="menu-btn" onclick="showExerciseHistory()">View Exercise History</button>
           <button class="menu-btn" onclick="setScene('town')">← Town</button>
         </div>
         <h1>Welcome to the Guild</h1>
@@ -124,55 +93,157 @@ function showRegistrationForm() {
   const content = document.getElementById('scene-content');
   content.innerHTML = `
     <h1>Register Account</h1>
-    <input type="text" id="usernameInput" placeholder="Enter username">
+    <div class="form-group">
+      <label for="usernameInput">Username:</label>
+      <input type="text" id="usernameInput" placeholder="Enter username">
+    </div>
+    <div class="form-group">
+      <label for="emailInput">Email:</label>
+      <input type="email" id="emailInput" placeholder="Enter email">
+    </div>
+    <div class="form-group">
+      <label for="passwordInput">Password:</label>
+      <input type="password" id="passwordInput" placeholder="Enter password">
+    </div>
     <button class="menu-btn" onclick="handleRegistration()">Register</button>
+    <button class="menu-btn" onclick="showLoginForm()">Go to Login</button>
     <button class="menu-btn" onclick="setScene('guild')">← Back to Guild</button>
   `;
 }
 
 function handleRegistration() {
   const usernameInput = document.getElementById('usernameInput');
-  const username = usernameInput.value.trim();
+  const emailInput = document.getElementById('emailInput');
+  const passwordInput = document.getElementById('passwordInput');
 
-  if (!username) {
-    alert("Username cannot be empty.");
+  const username = usernameInput.value.trim();
+  const email = emailInput.value.trim();
+  const password = passwordInput.value.trim();
+
+  if (!username || !email || !password) {
+    alert("Username, email, and password cannot be empty.");
     return;
   }
 
-  const existingUser = loadUserData(username);
-  if (existingUser) {
-    alert("User already exists.");
-  } else {
-    const newUserObject = {
-      username: username,
-      registeredAt: new Date().toISOString(),
-      exercises: []
-    };
-    saveUserData(username, newUserObject);
-    currentUser = newUserObject;
-    alert("Registration successful!");
-    setScene('guild');
+  const body = JSON.stringify({ username, email, password });
+
+  fetch('/api/users/register', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: body,
+  })
+  .then(response => {
+    if (response.ok) { // Typically 201 Created for registration
+      return response.json();
+    } else {
+      return response.json().then(err => { throw new Error(err.error || 'Registration failed') });
+    }
+  })
+  .then(data => {
+    alert(data.message || "Registration successful! Please login.");
+    currentUser = null; // Ensure user is not set
+    showLoginForm(); // Or navigate to login view
+  })
+  .catch(error => {
+    console.error('Registration error:', error);
+    alert(`Registration failed: ${error.message}`);
+  });
+}
+
+function showLoginForm() {
+  const content = document.getElementById('scene-content');
+  content.innerHTML = `
+    <h1>Login</h1>
+    <div class="form-group">
+      <label for="loginEmailInput">Email:</label>
+      <input type="email" id="loginEmailInput" placeholder="Enter email">
+    </div>
+    <div class="form-group">
+      <label for="loginPasswordInput">Password:</label>
+      <input type="password" id="loginPasswordInput" placeholder="Enter password">
+    </div>
+    <button class="menu-btn" onclick="handleLogin()">Login</button>
+    <button class="menu-btn" onclick="setScene('guild')">← Back to Guild</button>
+  `;
+}
+
+async function handleLogin() {
+  const emailInput = document.getElementById('loginEmailInput');
+  const passwordInput = document.getElementById('loginPasswordInput');
+
+  const email = emailInput.value.trim();
+  const password = passwordInput.value.trim();
+
+  if (!email || !password) {
+    alert("Email and password cannot be empty.");
+    return;
+  }
+
+  const body = JSON.stringify({ email, password });
+
+  try {
+    const response = await fetch('/api/users/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: body,
+    });
+
+    if (response.ok) { // Typically 200 OK for login
+      const data = await response.json();
+      currentUser = data.user; // Backend sends { message: '...', user: {...} }
+      alert(data.message || "Login successful!");
+      showGuildCard(); // Or setScene('guild') or another appropriate view
+    } else {
+      const errData = await response.json();
+      alert(errData.error || 'Login failed. Please check your credentials.');
+      currentUser = null;
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    alert(`Login failed: ${error.message}`);
+    currentUser = null;
   }
 }
 
 function showGuildCard() {
-  if (!currentUser || !currentUser.username) {
-    alert("Please register first.");
+  if (!currentUser || !currentUser.id) { // Check for ID, more robust
+    alert("Please login to view your Guild Card.");
+    showLoginForm(); // Redirect to login
     return;
   }
 
   const content = document.getElementById('scene-content');
+  // Ensure stats object exists and provide defaults if not
+  const stats = currentUser.stats || {
+    upperBodyStrength: 0,
+    lowerBodyStrength: 0,
+    coreStrength: 0,
+    powerExplosiveness: 0,
+    flexibilityMobility: 0,
+    cardioEndurance: 0
+  };
+
   content.innerHTML = `
     <h1>Guild Card</h1>
-    <div>Username: ${currentUser.username}</div>
+    <div class="guild-card-section">
+      <p><strong>Username:</strong> ${currentUser.username}</p>
+      <p><strong>Email:</strong> ${currentUser.email}</p>
+      <p><strong>Level:</strong> ${currentUser.level || 1}</p>
+      <p><strong>Experience:</strong> ${currentUser.experience || 0} XP</p>
+      <p><strong>Member Since:</strong> ${new Date(currentUser.createdAt).toLocaleDateString()}</p>
+    </div>
     <h2>Stats:</h2>
-    <ul>
-      <li>Upper Body Strength: 50</li>
-      <li>Lower Body Strength: 60</li>
-      <li>Core Strength: 55</li>
-      <li>Power Explosiveness: 40</li>
-      <li>Flexibility Mobility: 45</li>
-      <li>Cardio Endurance: 65</li>
+    <ul class="guild-card-stats">
+      <li>Upper Body Strength: ${stats.upperBodyStrength}</li>
+      <li>Lower Body Strength: ${stats.lowerBodyStrength}</li>
+      <li>Core Strength: ${stats.coreStrength}</li>
+      <li>Power Explosiveness: ${stats.powerExplosiveness}</li>
+      <li>Flexibility/Mobility: ${stats.flexibilityMobility}</li>
+      <li>Cardio/Endurance: ${stats.cardioEndurance}</li>
     </ul>
     <button class="menu-btn" onclick="setScene('guild')">← Back to Guild</button>
   `;
@@ -180,7 +251,7 @@ function showGuildCard() {
 
 function showExerciseLogForm() {
   if (!currentUser) {
-    alert("Please register first.");
+    alert("Please login to log exercises.");
     return;
   }
 
@@ -211,28 +282,106 @@ function showExerciseLogForm() {
   `;
 }
 
-function handleExerciseLog() {
-  if (!currentUser) {
-    alert("Please register or login first."); // Should not happen if showExerciseLogForm is called correctly
+async function handleExerciseLog() {
+  if (!currentUser || !currentUser.id) {
+    alert("Please login first to log exercises.");
+    return;
+  }
+
+  const exerciseType = document.getElementById('exerciseSelect').value;
+  const setsValue = document.getElementById('setsInput').value;
+  const repsValue = document.getElementById('repsInput').value;
+  const weightValue = document.getElementById('weightInput').value;
+
+  // Validate inputs
+  if (!exerciseType) {
+    alert("Please select an exercise type.");
+    return;
+  }
+  if (setsValue === '' || repsValue === '' || weightValue === '') {
+    alert("Please fill in sets, reps, and weight.");
+    return;
+  }
+
+  const sets = parseInt(setsValue);
+  const reps = parseInt(repsValue);
+  const weight = parseFloat(weightValue);
+
+  if (isNaN(sets) || sets <= 0 || isNaN(reps) || reps <= 0 || isNaN(weight) || weight < 0) {
+    alert("Please enter valid numbers for sets, reps, and weight. Sets and reps must be greater than 0. Weight cannot be negative.");
     return;
   }
 
   const exerciseLogEntry = {
-    date: new Date().toISOString(),
-    exerciseName: document.getElementById('exerciseSelect').value,
-    sets: parseInt(document.getElementById('setsInput').value) || 0,
-    reps: parseInt(document.getElementById('repsInput').value) || 0,
-    weight: parseFloat(document.getElementById('weightInput').value) || 0
+    date: new Date().toISOString(), // Backend can also default this
+    type: exerciseType, // Changed from exerciseName to type
+    sets: sets,
+    reps: reps,
+    weight: weight
   };
 
-  if (!currentUser.exercises) {
-    currentUser.exercises = [];
-  }
-  currentUser.exercises.push(exerciseLogEntry);
-  saveUserData(currentUser.username, currentUser);
+  const body = JSON.stringify(exerciseLogEntry);
 
-  alert("Exercise logged!");
-  setScene('guild');
+  try {
+    const response = await fetch(`/api/users/${currentUser.id}/exercises`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: body,
+    });
+
+    if (response.ok) {
+      const newExercise = await response.json();
+      // Ensure exerciseHistory array exists on currentUser
+      if (!currentUser.exerciseHistory) {
+        currentUser.exerciseHistory = [];
+      }
+      currentUser.exerciseHistory.push(newExercise);
+      alert("Exercise logged successfully!");
+      setScene('guild'); // Or perhaps show guild card or exercise history view
+    } else {
+      const errData = await response.json();
+      alert(`Error logging exercise: ${errData.error || 'Unknown server error'}`);
+    }
+  } catch (error) {
+    console.error('Failed to log exercise:', error);
+    alert(`Failed to log exercise: ${error.message}`);
+  }
+}
+
+function showExerciseHistory() {
+  const content = document.getElementById('scene-content');
+
+  if (!currentUser || !currentUser.id) {
+    alert("Please login to view history.");
+    showLoginForm(); // Redirect to login
+    return;
+  }
+
+  let historyHtml = '<h1>Exercise History</h1>';
+
+  if (!currentUser.exerciseHistory || currentUser.exerciseHistory.length === 0) {
+    historyHtml += '<p>No exercises logged yet.</p>';
+  } else {
+    // Sort exercises by date, most recent first
+    const sortedHistory = [...currentUser.exerciseHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    sortedHistory.forEach(exercise => {
+      historyHtml += `
+        <div class="exercise-entry" style="border: 1px solid #ccc; margin-bottom: 10px; padding: 10px;">
+          <p><strong>Date:</strong> ${new Date(exercise.date).toLocaleDateString()} ${new Date(exercise.date).toLocaleTimeString()}</p>
+          <p><strong>Type:</strong> ${exercise.type}</p>
+          <p><strong>Sets:</strong> ${exercise.sets}</p>
+          <p><strong>Reps:</strong> ${exercise.reps}</p>
+          <p><strong>Weight:</strong> ${exercise.weight} ${exercise.weightUnit || 'kg'}</p>
+        </div>`;
+        // Added a placeholder for weightUnit, assuming it might be added later. Defaulting to kg.
+    });
+  }
+
+  historyHtml += '<button class="menu-btn" onclick="setScene(\'guild\')">← Back to Guild</button>';
+  content.innerHTML = historyHtml;
 }
 
 // Initialize the town scene on page load
