@@ -5,156 +5,84 @@ import LoginForm from '../components/LoginForm';
 import RegistrationForm from '../components/RegistrationForm';
 import PlayerCard from '../components/PlayerCard';
 import ExerciseLogForm from '../components/ExerciseLogForm';
-import ExerciseHistory from '../components/ExerciseHistory'; // Import ExerciseHistory
-// Assuming guild-bg.png is in frontend/assets/
-// Path from frontend/src/pages/GuildPage.jsx to frontend/assets/guild-bg.png is ../../assets/guild-bg.png
+import ExerciseHistory from '../components/ExerciseHistory';
 import guildBg from '../../assets/guild-bg.png';
 
 const GuildPage = () => {
-  const { currentUser, error: globalError, clearError, setError } = useGlobalState();
-  // View states: 'options', 'login', 'register', 'loggedInMain', 'playerCard', 'logExercise', 'exerciseHistory'
+  const { currentUser, error: globalError, clearError } = useGlobalState();
   const [currentView, setCurrentView] = useState('options');
 
   useEffect(() => {
-    // If user logs in or out, adjust the view
     if (currentUser) {
-      setCurrentView('loggedInMain'); // Default view for logged-in users
-      clearError(); // Clear any previous errors on successful login/state change
+      setCurrentView('loggedInMain');
+      clearError();
     } else {
-      setCurrentView('options'); // Default view for logged-out users
+      setCurrentView('options');
     }
-  }, [currentUser]); // Re-run when currentUser changes
+  }, [currentUser]);
 
-  const pageStyle = {
+  const pageDynamicStyle = {
     backgroundImage: `url(${guildBg})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    minHeight: 'calc(100vh - 64px)', // Adjust if navbar height is different
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: '20px',
-    color: 'white', // Default text color for the page
   };
 
-  const contentBoxStyle = {
-    backgroundColor: 'rgba(0, 0, 0, 0.75)', // Darker, more opaque box for content
-    padding: '25px', // Increased padding
-    borderRadius: '10px', // More rounded corners
-    textAlign: 'center',
-    maxWidth: '600px',
-    width: '90%', // Responsive width
-    boxShadow: '0 0 15px rgba(0,0,0,0.5)', // Added a subtle shadow for depth
-  };
+  const baseButtonStyle = "inline-block py-2 px-5 mx-2 my-2 text-base font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-opacity-75 transition-transform transform hover:scale-105";
+  const primaryButtonStyle = `${baseButtonStyle} bg-yellow-500 hover:bg-yellow-600 text-black focus:ring-yellow-400`;
+  const secondaryButtonStyle = `${baseButtonStyle} bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500`;
+  const backButtonStyle = `${baseButtonStyle} bg-gray-700 hover:bg-gray-800 text-yellow-400 focus:ring-gray-600`;
 
-  const buttonStyle = {
-    display: 'inline-block',
-    padding: '12px 25px', // Slightly larger buttons
-    margin: '10px',
-    backgroundColor: 'gold',
-    color: 'black',
-    border: 'none',
-    borderRadius: '6px', // Consistent border radius
-    textDecoration: 'none',
-    fontSize: '1.1em', // Slightly larger font
-    cursor: 'pointer',
-    fontWeight: 'bold',
-    transition: 'background-color 0.2s, transform 0.1s',
-  };
-
-  const handleLoginSuccess = () => {
-    // currentUser state change will trigger useEffect to set view to 'loggedInMain'
-  };
-
-  const handleRegistrationSuccess = () => {
-    alert('Registration successful! Please login.');
-    setCurrentView('login');
-    clearError();
-  };
 
   const renderContent = () => {
     if (!currentUser) {
-      // Not logged in
       switch (currentView) {
         case 'login':
-          return (
-            <LoginForm
-              onLoginSuccess={handleLoginSuccess}
-              onSwitchToRegister={() => { setCurrentView('register'); clearError(); }}
-            />
-          );
+          return <LoginForm onLoginSuccess={() => {}} onSwitchToRegister={() => { setCurrentView('register'); clearError(); }} />;
         case 'register':
-          return (
-            <RegistrationForm
-              onRegistrationSuccess={handleRegistrationSuccess}
-              onSwitchToLogin={() => { setCurrentView('login'); clearError(); }}
-            />
-          );
-        case 'options':
-        default:
+          return <RegistrationForm onRegistrationSuccess={() => { alert('Registration successful! Please login.'); setCurrentView('login'); clearError(); }} onSwitchToLogin={() => { setCurrentView('login'); clearError(); }} />;
+        default: // options
           return (
             <>
-              <h1>Adventurer's Guild</h1> {/* Emoji removed */}
-              <p style={{fontSize: '1.2em', marginBottom: '20px'}}>
-                Welcome! Please log in or register to access guild services.
-              </p>
+              <h1 className="text-3xl font-bold mb-4 text-yellow-400">Adventurer's Guild</h1>
+              <p className="text-lg mb-6">Welcome! Please log in or register to access guild services.</p>
               <div>
-                <button
-                  style={buttonStyle}
-                  onClick={() => { setCurrentView('login'); clearError(); }}
-                  onMouseOver={e => e.currentTarget.style.backgroundColor = '#ffd700'}
-                  onMouseOut={e => e.currentTarget.style.backgroundColor = 'gold'}
-                >
-                  Login
-                </button>
-                <button
-                  style={buttonStyle}
-                  onClick={() => { setCurrentView('register'); clearError(); }}
-                  onMouseOver={e => e.currentTarget.style.backgroundColor = '#ffd700'}
-                  onMouseOut={e => e.currentTarget.style.backgroundColor = 'gold'}
-                >
-                  Register
-                </button>
+                <button className={primaryButtonStyle} onClick={() => { setCurrentView('login'); clearError(); }}>Login</button>
+                <button className={primaryButtonStyle} onClick={() => { setCurrentView('register'); clearError(); }}>Register</button>
               </div>
             </>
           );
       }
-    } else {
-      // Logged In
+    } else { // Logged In
       switch (currentView) {
         case 'loggedInMain':
           return (
             <div>
-              <h2>Welcome back, {currentUser.username}!</h2>
-              <p style={{fontSize: '1.1em', marginBottom: '25px'}}>What would you like to do?</p>
-              <button style={buttonStyle} onClick={() => setCurrentView('playerCard')}>View Player Card</button>
-              <button style={buttonStyle} onClick={() => setCurrentView('logExercise')}>Log Exercise</button>
-              <button style={buttonStyle} onClick={() => setCurrentView('exerciseHistory')}>View Exercise History</button>
+              <h2 className="text-2xl font-semibold mb-3">Welcome back, <span className="text-yellow-400">{currentUser.username}</span>!</h2>
+              <p className="text-md mb-6">What would you like to do?</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <button className={secondaryButtonStyle} onClick={() => setCurrentView('playerCard')}>View Player Card</button>
+                <button className={secondaryButtonStyle} onClick={() => setCurrentView('logExercise')}>Log Exercise</button>
+                <button className={secondaryButtonStyle} onClick={() => setCurrentView('exerciseHistory')}>View Exercise History</button>
+              </div>
             </div>
           );
         case 'playerCard':
           return (
-            <div> {/* Retain a div for consistent structure if needed, or PlayerCard can be root */}
+            <div>
               <PlayerCard />
-              <button style={buttonStyle} onClick={() => setCurrentView('loggedInMain')}>Back to Guild Menu</button>
+              <button className={backButtonStyle + " mt-4"} onClick={() => setCurrentView('loggedInMain')}>Back to Guild Menu</button>
             </div>
           );
         case 'logExercise':
           return (
             <div>
               <ExerciseLogForm onLogSuccess={() => setCurrentView('loggedInMain')} />
-              <button style={buttonStyle} onClick={() => setCurrentView('loggedInMain')}>
-                Back to Guild Menu
-              </button>
+              <button className={backButtonStyle + " mt-4"} onClick={() => setCurrentView('loggedInMain')}>Back to Guild Menu</button>
             </div>
           );
         case 'exerciseHistory':
           return (
             <div>
               <ExerciseHistory />
-              <button style={buttonStyle} onClick={() => setCurrentView('loggedInMain')}>
-                Back to Guild Menu
-              </button>
+              <button className={backButtonStyle + " mt-4"} onClick={() => setCurrentView('loggedInMain')}>Back to Guild Menu</button>
             </div>
           );
         default:
@@ -165,28 +93,20 @@ const GuildPage = () => {
   };
 
   return (
-    <div style={pageStyle}>
-      <div style={contentBoxStyle}>
+    <div style={pageDynamicStyle} className="bg-cover bg-center min-h-[calc(100vh-64px)] flex flex-col items-center p-5 text-white">
+      <div className="bg-gray-900 bg-opacity-80 p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-2xl lg:max-w-3xl backdrop-blur-sm">
         {globalError && currentView !== 'loggedInMain' && (
-          <div style={{ backgroundColor: 'rgba(200,0,0,0.8)', color: 'white', padding: '10px', marginBottom: '20px', borderRadius: '5px', border: '1px solid red' }}>
-            <p style={{margin: 0, fontWeight: 'bold'}}>Error: {globalError}</p>
-            <button onClick={clearError} style={{ ...buttonStyle, backgroundColor: '#666', color: 'white', fontSize: '0.9em', padding: '6px 12px', marginTop: '8px'}}>Dismiss</button>
+          <div className="bg-red-600 bg-opacity-90 border border-red-700 text-white p-3 mb-5 rounded-md shadow-lg">
+            <p className="font-semibold">Error: {globalError}</p>
+            <button onClick={clearError} className={`${secondaryButtonStyle} bg-red-500 hover:bg-red-400 text-xs mt-2 py-1 px-2`}>Dismiss</button>
           </div>
         )}
         {renderContent()}
-        <div style={{ marginTop: '40px' }}>
-          <Link
-            to="/"
-            style={{...buttonStyle, backgroundColor: '#4A5568', color: 'white'}}
-            onMouseOver={e => e.currentTarget.style.backgroundColor = '#2D3748'}
-            onMouseOut={e => e.currentTarget.style.backgroundColor = '#4A5568'}
-          >
-            Back to Town {/* Emoji removed */}
-          </Link>
+        <div className="mt-8 text-center">
+          <Link to="/" className={backButtonStyle}>Back to Town</Link>
         </div>
       </div>
     </div>
   );
 };
-
 export default GuildPage;
