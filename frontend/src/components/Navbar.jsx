@@ -1,5 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { useGlobalState } from '../context/GlobalState';
+import { Link, useNavigate } from 'react-router-dom'; // Added useNavigate
+import { useGlobalState } from '../context/GlobalState'; // Adjust path as needed
 
 const Navbar = () => {
   const { currentUser, logoutUser, error, clearError } = useGlobalState();
@@ -7,40 +7,34 @@ const Navbar = () => {
 
   const handleLogout = () => {
     logoutUser();
-    clearError();
-    navigate('/');
+    clearError(); // Clear any errors on logout
+    navigate('/'); // Redirect to home page or login page after logout
   };
 
   return (
     <>
-      <nav className="p-4 bg-gray-900 text-white flex flex-wrap gap-x-6 gap-y-2 justify-center items-center shadow-lg">
-        <Link to="/" className="text-lg hover:text-yellow-400 transition-colors">Town</Link>
-        <Link to="/guild" className="text-lg hover:text-yellow-400 transition-colors">Guild</Link>
-        <Link to="/dungeon" className="text-lg hover:text-yellow-400 transition-colors">Dungeon</Link>
-
+      <nav className="p-4 bg-gray-900 text-white flex gap-4 justify-center items-center">
+        <Link to="/">🏠 Town</Link>
+        <Link to="/guild">🛡️ Guild</Link>
+        <Link to="/dungeon">⚔️ Dungeon</Link>
         {currentUser ? (
-          <div className="flex items-center gap-x-4 gap-y-2 flex-wrap justify-center">
-            <span className="text-sm">Welcome, {currentUser.username}!</span>
-            <button
-              onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-1 px-3 rounded-md shadow transition-colors"
-            >
+          <>
+            <span className="ml-4">Welcome, {currentUser.username}!</span>
+            <button onClick={handleLogout} className="ml-2 p-2 bg-red-500 hover:bg-red-700 rounded">
               Logout
             </button>
-          </div>
+          </>
         ) : (
-          <div className="flex items-center gap-x-4">
-            {/* Optional: Add Login/Register links here if desired in navbar */}
-          </div>
+          <>
+            {/* Links to login/register pages could be here, or handled by Guild page */}
+            {/* For now, let's assume GuildPage will handle showing forms */}
+          </>
         )}
       </nav>
       {error && (
-        <div className="bg-red-700 bg-opacity-90 text-white p-3 text-center shadow-md relative">
-          <span>Error: {error}</span>
-          <button
-            onClick={clearError}
-            className="ml-4 bg-red-500 hover:bg-red-400 text-white text-xs font-semibold py-1 px-2 rounded-md transition-colors"
-          >
+        <div style={{ backgroundColor: 'red', color: 'white', padding: '10px', textAlign: 'center' }}>
+          Error: {error}
+          <button onClick={clearError} style={{ marginLeft: '10px', color: 'white', background: 'transparent', border: '1px solid white' }}>
             Dismiss
           </button>
         </div>
