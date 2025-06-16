@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import townMap3 from '../../assets/town-map3.png'; // Keep image import
 
