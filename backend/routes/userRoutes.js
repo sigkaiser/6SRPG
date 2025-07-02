@@ -90,4 +90,65 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// --- Stat Calculation Service and User Model ---
+// Ensure User model is already required at the top if not (it is in this file)
+const { calculateUserStats, fetchExerciseDb } = require('../services/statCalculationService');
+
+// POST /api/users/:userId/recalculate-stats - Recalculate and update user stats
+router.post('/:userId/recalculate-stats', async (req, res) => {
+    const { userId } = req.params;
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Fetch the Free Exercise DB data
+        const exerciseDbData = await fetchExerciseDb();
+        if (!exerciseDbData || exerciseDbData.length === 0) {
+            // This indicates a problem fetching or with the DB content itself.
+            return res.status(503).json({ message: 'Exercise database is currently unavailable or empty.' });
+        }
+
+        const calculatedResults = await calculateUserStats(user.exerciseHistory, exerciseDbData);
+
+        // Separate the stats from detailedContributions
+        const { detailedContributions, ...newStatsFromCalc } = calculatedResults;
+
+        // Update user's stats
+        // Ensure user.stats exists, initialize if it's somehow missing
+        if (!user.stats) {
+            user.stats = {};
+        }
+
+        // Update only the stats that are actually calculated and present in newStatsFromCalc
+        // This avoids accidentally wiping other potential stat fields if they exist.
+        for (const statKey in newStatsFromCalc) {
+            if (newStatsFromCalc.hasOwnProperty(statKey)) {
+                user.stats[statKey] = newStatsFromCalc[statKey];
+            }
+        }
+
+        // Mark 'stats' as modified because it's a mixed type schema.
+        // This tells Mongoose that the sub-document has changed.
+        user.markModified('stats');
+
+        await user.save();
+
+        // Prepare response: user data + detailed contributions
+        const userResponse = user.toJSON(); // Uses transform from UserSchema
+        userResponse.detailedContributions = detailedContributions;
+
+        res.json({ message: 'Stats recalculated successfully.', user: userResponse });
+
+    } catch (error) {
+        console.error(`Error recalculating stats for user ${userId}:`, error);
+        if (error.message.includes('Could not fetch exercise database') || error.message.includes('Exercise database is currently unavailable')) {
+            res.status(503).json({ message: `Service dependency failure: ${error.message}` });
+        } else {
+            res.status(500).json({ message: 'An error occurred while recalculating stats.' });
+        }
+    }
+});
+
 module.exports = router;

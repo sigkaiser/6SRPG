@@ -72,38 +72,42 @@ export const logExercise = async (userId, exerciseData) => {
 export const fetchUserExerciseHistory = async (userId) => {
   console.log(`Fetching exercise history for user ${userId}...`);
   try {
-    // As per instruction, assume GET /api/users/{userId} returns full user object including exerciseHistory
     const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
       method: 'GET',
       headers: {
-        // Include Authorization header if needed, e.g., for protected routes
-        // 'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        // 'Authorization': `Bearer ${localStorage.getItem('token')}`, // If auth is implemented
       },
     });
     const data = await response.json();
     if (!response.ok) {
-      // If the endpoint is just for history and returns { history: [...] }
-      // return { success: false, message: data.message || 'Failed to fetch exercise history.' };
-      // If it returns the full user object:
       return { success: false, message: data.message || 'Failed to fetch user data.' };
     }
-    // If backend returns { user: { exerciseHistory: [...] } } or similar
-    // Adjust access to exerciseHistory based on actual backend response structure.
-    // For now, assuming data directly is the user object or has a top-level exerciseHistory field.
-    // The component using this (useGlobalState's initial fetch or a direct call) will need to adapt.
-    // Let's assume the backend returns the full user object as `data` (which includes `exerciseHistory`)
-    // This function will then be used to update the user in global state.
-    // Or, if the backend has a specific endpoint /api/users/{userId}/exercises for GET:
-    // const response = await fetch(`${API_BASE_URL}/api/users/${userId}/exercises`, { method: 'GET' });
-    // const data = await response.json(); // Assuming this returns { success: true, history: [...] }
-    // if (!response.ok) return { success: false, message: data.message || 'Failed to fetch exercise history.' };
-    // return { success: true, history: data.history };
-
-    // For now, sticking to GET /api/users/{userId} returning the user object:
-    return { success: true, user: data }; // The component/context will then extract exerciseHistory from user.
-
+    return { success: true, user: data };
   } catch (error) {
-    console.error('Fetch Exercise History API error:', error);
-    return { success: false, message: error.message || 'A network error occurred while fetching exercise history.' };
+    console.error('Fetch User Data API error:', error);
+    return { success: false, message: error.message || 'A network error occurred while fetching user data.' };
+  }
+};
+
+export const recalculateUserStats = async (userId) => {
+  console.log(`Requesting stat recalculation for user ${userId}...`);
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/users/${userId}/recalculate-stats`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // 'Authorization': `Bearer ${localStorage.getItem('token')}`, // If auth is implemented
+      },
+      // No body is needed for this POST request as per current design
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      return { success: false, message: data.message || 'Failed to recalculate stats.' };
+    }
+    // Expected response: { message: '...', user: { ... (updated stats), detailedContributions: { ... } } }
+    return { success: true, ...data };
+  } catch (error) {
+    console.error('Recalculate Stats API error:', error);
+    return { success: false, message: error.message || 'A network error occurred while recalculating stats.' };
   }
 };
