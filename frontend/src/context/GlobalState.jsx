@@ -1,8 +1,12 @@
 import React, { createContext, useReducer, useContext, useEffect } from 'react';
 
 // Initial state
+import { recalculateUserStats as apiRecalculateUserStats } from '../services/api'; // Added import
+
 const initialState = {
   currentUser: null,
+  currentUserDetailedContributions: null, // Added for stat contributions
+  isLoadingStats: false, // Added for loading state of stats recalculation
   exercises: [],
   loadingExercises: false,
   error: null,
@@ -16,14 +20,18 @@ const LOAD_EXERCISES_SUCCESS = 'LOAD_EXERCISES_SUCCESS';
 const LOAD_EXERCISES_FAIL = 'LOAD_EXERCISES_FAIL';
 const SET_ERROR = 'SET_ERROR';
 const CLEAR_ERROR = 'CLEAR_ERROR';
+const RECALCULATE_STATS_START = 'RECALCULATE_STATS_START'; // Added
+const RECALCULATE_STATS_SUCCESS = 'RECALCULATE_STATS_SUCCESS'; // Added
+const RECALCULATE_STATS_FAIL = 'RECALCULATE_STATS_FAIL'; // Added
 
 // Reducer
 function globalReducer(state, action) {
   switch (action.type) {
     case LOGIN_SUCCESS:
-      return { ...state, currentUser: action.payload, error: null };
+      // Reset detailed contributions on new login
+      return { ...state, currentUser: action.payload, currentUserDetailedContributions: null, error: null };
     case LOGOUT:
-      return { ...state, currentUser: null, error: null };
+      return { ...state, currentUser: null, currentUserDetailedContributions: null, error: null };
     case LOAD_EXERCISES_START:
       return { ...state, loadingExercises: true, error: null };
     case LOAD_EXERCISES_SUCCESS:
@@ -34,6 +42,18 @@ function globalReducer(state, action) {
       return { ...state, error: action.payload };
     case CLEAR_ERROR:
       return { ...state, error: null };
+    case RECALCULATE_STATS_START: // Added
+      return { ...state, isLoadingStats: true, error: null };
+    case RECALCULATE_STATS_SUCCESS: // Added
+      return {
+        ...state,
+        isLoadingStats: false,
+        currentUser: action.payload.user,
+        currentUserDetailedContributions: action.payload.detailedContributions,
+        error: null
+      };
+    case RECALCULATE_STATS_FAIL: // Added
+      return { ...state, isLoadingStats: false, error: action.payload };
     default:
       return state;
   }
@@ -49,12 +69,10 @@ export const GlobalStateProvider = ({ children }) => {
   // Actions
   const loginUser = (userData) => {
     dispatch({ type: LOGIN_SUCCESS, payload: userData });
-    // Potentially save user to localStorage here if persistence is needed beyond session
   };
 
   const logoutUser = () => {
     dispatch({ type: LOGOUT });
-    // Potentially remove user from localStorage here
   };
 
   const loadExercises = async () => {
@@ -81,6 +99,30 @@ export const GlobalStateProvider = ({ children }) => {
     }
   };
 
+  const recalculateStats = async (userId) => { // Added function
+    if (!userId) {
+      console.error("RecalculateStats: userId is undefined.");
+      dispatch({ type: RECALCULATE_STATS_FAIL, payload: "User ID not provided for stat recalculation." });
+      return;
+    }
+    dispatch({ type: RECALCULATE_STATS_START });
+    try {
+      const result = await apiRecalculateUserStats(userId);
+      if (result.success && result.user) {
+        dispatch({
+          type: RECALCULATE_STATS_SUCCESS,
+          payload: { user: result.user, detailedContributions: result.user.detailedContributions }
+        });
+      } else {
+        throw new Error(result.message || 'Failed to recalculate stats.');
+      }
+    } catch (error) {
+      console.error('Error recalculating stats in GlobalState:', error);
+      dispatch({ type: RECALCULATE_STATS_FAIL, payload: error.message });
+    }
+  };
+
+
   const setError = (errorMessage) => {
     dispatch({ type: SET_ERROR, payload: errorMessage });
   };
@@ -94,19 +136,22 @@ export const GlobalStateProvider = ({ children }) => {
     if (state.exercises.length === 0) {
         loadExercises();
     }
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
 
   return (
     <GlobalStateContext.Provider
       value={{
         currentUser: state.currentUser,
+        currentUserDetailedContributions: state.currentUserDetailedContributions, // Added
+        isLoadingStats: state.isLoadingStats, // Added
         exercises: state.exercises,
         loadingExercises: state.loadingExercises,
         error: state.error,
         loginUser,
         logoutUser,
         loadExercises,
+        recalculateStats, // Added
         setError,
         clearError,
       }}
