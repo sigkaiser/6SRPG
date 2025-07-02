@@ -61,7 +61,8 @@ export const logExercise = async (userId, exerciseData) => {
     }
     // Assuming backend returns { message: '...', exercise: {...} }
     // The global state update in ExerciseLogForm expects `response.exercise`
-    return { success: true, message: data.message || "Exercise logged!", exercise: data.exercise };
+    // Backend returns just the exercise object as data.
+    return { success: true, message: data.message || "Exercise logged!", exercise: data };
   } catch (error) {
     console.error('Log Exercise API error:', error);
     return { success: false, message: error.message || 'A network error occurred while logging exercise.' };
