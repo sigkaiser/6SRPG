@@ -1,0 +1,220 @@
+{
+  "muscles": {
+    "abdominals": {
+      "CoreStrength": 1.0,
+      "PowerExplosiveness": 0.2,
+      "CardioEndurance": 0.1,
+      "FlexibilityMobility": 0.1
+    },
+    "glutes": {
+      "LowerBodyStrength": 0.9,
+      "PowerExplosiveness": 0.3
+    },
+    "quadriceps": {
+      "LowerBodyStrength": 1.0,
+      "PowerExplosiveness": 0.3
+    },
+    "hamstrings": {
+      "LowerBodyStrength": 1.0,
+      "PowerExplosiveness": 0.4
+    },
+    "calves": {
+      "LowerBodyStrength": 0.3,
+      "PowerExplosiveness": 0.3,
+      "CardioEndurance": 0.2,
+      "FlexibilityMobility": 0.1
+    },
+    "chest": {
+      "UpperBodyStrength": 1.0,
+      "PowerExplosiveness": 0.2
+    },
+    "biceps": {
+      "UpperBodyStrength": 0.7,
+      "CoreStrength": 0.1,
+      "PowerExplosiveness": 0.2
+    },
+    "triceps": {
+      "UpperBodyStrength": 0.7,
+      "CoreStrength": 0.1
+    },
+    "shoulders": {
+      "UpperBodyStrength": 0.7,
+      "CoreStrength": 0.1,
+      "FlexibilityMobility": 0.1
+    },
+    "traps": {
+      "UpperBodyStrength": 0.7,
+      "CoreStrength": 0.1,
+      "PowerExplosiveness": 0.3
+    },
+    "lats": {
+      "UpperBodyStrength": 0.6,
+      "CoreStrength": 0.1,
+      "Vitality": 0.2
+    },
+    "middle back": {
+      "UpperBodyStrength": 0.6,
+      "CoreStrength": 0.1
+    },
+    "lower back": {
+      "CoreStrength": 0.6,
+      "PowerExplosiveness": 0.2
+    },
+    "forearms": {
+      "UpperBodyStrength": 0.5
+    },
+    "neck": {
+      "UpperBodyStrength": 0.3
+    },
+    "adductors": {
+      "LowerBodyStrength": 0.5
+    },
+    "abductors": {
+      "LowerBodyStrength": 0.5
+    }
+  },
+  "force": {
+    "static": {
+      "CoreStrength": 0.3,
+      "CardioEndurance": 0.1,
+      "FlexibilityMobility": 0.4
+    },
+    "pull": {
+      "UpperBodyStrength": 0.5,
+      "CoreStrength": 0.1,
+      "PowerExplosiveness": 0.2
+    },
+    "push": {
+      "UpperBodyStrength": 0.5,
+      "LowerBodyStrength": 0.2,
+      "PowerExplosiveness": 0.3
+    }
+  },
+  "difficulty": {
+    "beginner": {
+      "UpperBodyStrength": 0.3,
+      "LowerBodyStrength": 0.3,
+      "CoreStrength": 0.3,
+      "PowerExplosiveness": 0.1,
+      "CardioEndurance": 0.2,
+      "FlexibilityMobility": 0.3
+    },
+    "intermediate": {
+      "UpperBodyStrength": 0.5,
+      "LowerBodyStrength": 0.5,
+      "CoreStrength": 0.4,
+      "PowerExplosiveness": 0.3,
+      "CardioEndurance": 0.4,
+      "FlexibilityMobility": 0.4
+    },
+    "expert": {
+      "UpperBodyStrength": 0.7,
+      "LowerBodyStrength": 0.7,
+      "CoreStrength": 0.5,
+      "PowerExplosiveness": 0.5,
+      "CardioEndurance": 0.5,
+      "FlexibilityMobility": 0.5
+    }
+  },
+  "mechanic": {
+    "isolation": {
+      "UpperBodyStrength": 0.6,
+      "LowerBodyStrength": 0.6,
+      "CoreStrength": 0.2,
+      "PowerExplosiveness": 0.1,
+      "CardioEndurance": 0.1,
+      "FlexibilityMobility": 0.1
+    },
+    "compound": {
+      "UpperBodyStrength": 0.8,
+      "LowerBodyStrength": 0.8,
+      "CoreStrength": 0.3,
+      "PowerExplosiveness": 0.4,
+      "CardioEndurance": 0.2,
+      "FlexibilityMobility": 0.1
+    }
+  },
+  "equipment": {
+    "barbell": {
+      "UpperBodyStrength": 0.7,
+      "LowerBodyStrength": 0.7,
+      "CoreStrength": 0.3,
+      "PowerExplosiveness": 0.4
+    },
+    "dumbbell": {
+      "UpperBodyStrength": 0.6,
+      "LowerBodyStrength": 0.6,
+      "CoreStrength": 0.3,
+      "PowerExplosiveness": 0.2,
+      "CardioEndurance": 0.1
+    },
+    "body only": {
+      "UpperBodyStrength": 0.4,
+      "LowerBodyStrength": 0.3,
+      "CoreStrength": 0.4,
+      "PowerExplosiveness": 0.2,
+      "CardioEndurance": 0.3,
+      "FlexibilityMobility": 0.3
+    },
+    "bands": {
+      "UpperBodyStrength": 0.3,
+      "LowerBodyStrength": 0.3,
+      "CoreStrength": 0.2,
+      "PowerExplosiveness": 0.2,
+      "CardioEndurance": 0.1,
+      "FlexibilityMobility": 0.2
+    },
+    "kettlebells": {
+      "UpperBodyStrength": 0.5,
+      "LowerBodyStrength": 0.5,
+      "CoreStrength": 0.3,
+      "PowerExplosiveness": 0.3,
+      "CardioEndurance": 0.1
+    },
+    "cable": {
+      "UpperBodyStrength": 0.4,
+      "LowerBodyStrength": 0.3,
+      "CoreStrength": 0.2,
+      "PowerExplosiveness": 0.2,
+      "FlexibilityMobility": 0.1
+    },
+    "machine": {
+      "UpperBodyStrength": 0.5,
+      "LowerBodyStrength": 0.5,
+      "CoreStrength": 0.2,
+      "PowerExplosiveness": 0.1
+    },
+    "medicine ball": {
+      "UpperBodyStrength": 0.2,
+      "LowerBodyStrength": 0.2,
+      "CoreStrength": 0.2,
+      "PowerExplosiveness": 0.2,
+      "CardioEndurance": 0.2,
+      "FlexibilityMobility": 0.2
+    },
+    "foam roll": {
+      "CoreStrength": 0.1,
+      "FlexibilityMobility": 0.9
+    },
+    "exercise ball": {
+      "UpperBodyStrength": 0.2,
+      "LowerBodyStrength": 0.2,
+      "CoreStrength": 0.5,
+      "PowerExplosiveness": 0.1,
+      "CardioEndurance": 0.1,
+      "FlexibilityMobility": 0.4
+    },
+    "e-z curl bar": {
+      "UpperBodyStrength": 0.5,
+      "CoreStrength": 0.1
+    },
+    "other": {
+      "UpperBodyStrength": 0.2,
+      "LowerBodyStrength": 0.2,
+      "CoreStrength": 0.2,
+      "PowerExplosiveness": 0.2,
+      "CardioEndurance": 0.2,
+      "FlexibilityMobility": 0.2
+    }
+  }
+}
