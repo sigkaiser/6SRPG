@@ -36,6 +36,7 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+*.bat
 
 # Vite
 .vite/
