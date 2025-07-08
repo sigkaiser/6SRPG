@@ -14,32 +14,22 @@ const ExerciseHistory = () => {
     );
   }
   const sortedHistory = [...exerciseHistory].sort((a, b) => (b.date ? new Date(b.date) : 0) - (a.date ? new Date(a.date) : 0));
-  const weightUnit = currentUser.preferences?.units === 'metric' ? 'kg' : 'lbs';
 
   return (
-    <div className="w-full max-w-2xl p-1"> {/* Adjusted max-width slightly for more space */}
+    <div className="w-full max-w-xl p-1">
       <h3 className="text-2xl font-bold text-center text-yellow-400 mb-6">Your Exercise History</h3>
-      <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2  {/* Reduced space-y */}
+      <div className="max-h-[400px] overflow-y-auto space-y-3 pr-2
                       scrollbar-thin scrollbar-thumb-yellow-500 scrollbar-track-gray-700
                       border border-gray-700 rounded-lg bg-gray-800 bg-opacity-70 p-3">
         {sortedHistory.map((entry, index) => (
-          <div
-            key={entry._id || entry.id || index} // Prefer _id from DB if available
-            className="bg-gray-700 p-2.5 rounded-md shadow text-sm flex flex-wrap justify-between items-center" // Adjusted padding & flex properties
-          >
-            <span className="font-semibold text-yellow-300 mr-3 flex-shrink-0 whitespace-nowrap">
-              {entry.date ? new Date(entry.date).toLocaleDateString() : 'N/A'}
-            </span>
-            <span className="text-gray-100 truncate mr-3 flex-grow min-w-[100px]" title={entry.type || 'N/A'}> {/* Allow type to grow and truncate */}
-              {entry.type || 'N/A'}
-            </span>
-            <div className="flex space-x-2 text-gray-300 items-center flex-shrink-0"> {/* Details container */}
-              <span>S: {entry.sets !== undefined ? entry.sets : 'N/A'}</span>
-              <span>R: {entry.reps !== undefined ? entry.reps : 'N/A'}</span>
-              <span className="whitespace-nowrap"> {/* Prevent weight and unit from wrapping */}
-                W: {entry.weight !== undefined ? entry.weight : 'N/A'} {entry.weightUnit || weightUnit}
-              </span>
-            </div>
+          <div key={entry.id || index} className="bg-gray-700 p-3 rounded-md shadow text-sm">
+            <p className="font-semibold text-yellow-300">
+              {entry.date ? new Date(entry.date).toLocaleDateString() : 'N/A'} - {entry.date ? new Date(entry.date).toLocaleTimeString() : ''}
+            </p>
+            <p><strong className="text-gray-300">Type:</strong> {entry.type || 'N/A'}</p>
+            <p><strong className="text-gray-300">Sets:</strong> {entry.sets !== undefined ? entry.sets : 'N/A'}</p>
+            <p><strong className="text-gray-300">Reps:</strong> {entry.reps !== undefined ? entry.reps : 'N/A'}</p>
+            <p><strong className="text-gray-300">Weight:</strong> {entry.weight !== undefined ? entry.weight : 'N/A'} {entry.weightUnit || 'kg'}</p>
           </div>
         ))}
       </div>
