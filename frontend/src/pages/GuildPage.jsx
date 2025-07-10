@@ -12,13 +12,12 @@ const GuildPage = () => {
   const [currentView, setCurrentView] = useState('loggedInMain');
 
   useEffect(() => {
-    // If currentUser is available, ensure errors are cleared and view is main.
-    // This effect might be redundant if App.jsx handles redirection correctly,
-    // but serves as a local reset if the component is somehow rendered while logged in.
     if (currentUser) {
       clearError();
-      // If not already on a specific sub-view, default to loggedInMain
-      if (currentView !== 'playerCard' && currentView !== 'logExercise' && currentView !== 'exerciseHistory') {
+      const isKnownSubView = currentView === 'playerCard' || currentView === 'logExercise' || currentView === 'exerciseHistory';
+      // Only set to 'loggedInMain' if it's not a known sub-view AND it's not already 'loggedInMain'.
+      // This prevents unnecessary re-renders and potential loops.
+      if (!isKnownSubView && currentView !== 'loggedInMain') {
         setCurrentView('loggedInMain');
       }
     }
