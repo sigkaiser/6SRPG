@@ -9,8 +9,8 @@ import guildBg from '../../assets/guild-bg.png';
 const GuildPage = () => {
   const { currentUser, error: globalError, clearError } = useGlobalState();
   // currentView now manages states within the logged-in Guild experience
-  // Default view is 'questBoard'
-  const [currentView, setCurrentView] = useState('questBoard');
+  // Default view is null (nothing selected)
+  const [currentView, setCurrentView] = useState(null);
 
   useEffect(() => {
     if (currentUser) {
@@ -26,20 +26,19 @@ const GuildPage = () => {
     backgroundSize: 'cover',
     backgroundPosition: 'center center',
     backgroundRepeat: 'no-repeat',
-    minHeight: '100vh', // Ensure it covers the full viewport height
+    height: '100vh', // Ensure it covers the full viewport height
     width: '100vw',
     display: 'flex', // Using flex to align children (main content wrapper)
     alignItems: 'center', // Vertically center the main content wrapper
     justifyContent: 'center', // Horizontally center the main content wrapper
-    padding: '20px', // Add some padding around the main content wrapper
   };
 
   const baseButtonStyle =
-    'w-full text-left py-3 px-5 my-1 text-base font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-opacity-75 transition-transform transform hover:scale-105';
+    'w-1/2 mx-auto text-left py-3 px-5 my-1 text-base font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-opacity-75 transition-transform transform hover:scale-105';
   const sidebarButtonStyle = `${baseButtonStyle} bg-gray-700 hover:bg-gray-600 text-yellow-400 focus:ring-gray-500`;
   // active style for sidebar buttons can be added if desired, e.g., based on currentView
   // const activeSidebarButtonStyle = `${sidebarButtonStyle} bg-gray-600 ring-2 ring-yellow-500`;
-  const backToTownButtonStyle = `inline-block py-2 px-5 mx-2 my-2 text-base font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-opacity-75 transition-transform transform hover:scale-105 bg-gray-700 hover:bg-gray-800 text-yellow-400 focus:ring-gray-600`;
+  // const backToTownButtonStyle = `inline-block py-2 px-5 mx-2 my-2 text-base font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-opacity-75 transition-transform transform hover:scale-105 bg-gray-700 hover:bg-gray-800 text-yellow-400 focus:ring-gray-600`;
 
 
   if (!currentUser) {
@@ -54,10 +53,10 @@ const GuildPage = () => {
     switch (currentView) {
       case 'questBoard':
         return (
-          <div className="p-6 bg-gray-800 bg-opacity-70 rounded-lg shadow-xl">
+          <div className="p-6 bg-gray-100 text-gray-900 rounded-lg shadow-xl">
             <h2 className="text-2xl font-bold mb-4 text-yellow-400">Quest Board</h2>
             <p>This is the Quest Board. Epic adventures await!</p>
-            <p className="mt-2 text-sm text-gray-300">(Placeholder content - full implementation coming soon!)</p>
+            <p className="mt-2 text-sm text-gray-700">(Placeholder content - full implementation coming soon!)</p>
           </div>
         );
       case 'playerCard':
@@ -68,8 +67,7 @@ const GuildPage = () => {
       case 'exerciseHistory':
         return <ExerciseHistory />; // ExerciseHistory might need internal styling adjustments
       default:
-        // Fallback to questBoard if currentView is unrecognized
-        setCurrentView('questBoard');
+        // If currentView is null or unrecognized, render nothing.
         return null;
     }
   };
@@ -80,16 +78,17 @@ const GuildPage = () => {
       <div className="flex w-full h-full max-w-6xl bg-gray-900 bg-opacity-80 rounded-xl shadow-2xl backdrop-blur-sm overflow-hidden" style={{maxHeight: '90vh'}}>
 
         {/* Sidebar */}
-        <div className="w-1/3 max-w-xs bg-gray-800 bg-opacity-60 p-6 flex flex-col space-y-4 overflow-y-auto">
+        <div className="w-1/3 max-w-xs bg-gray-800 bg-opacity-60 p-6 flex flex-col space-y-4 overflow-y-hidden overflow-x-hidden h-full mr-6">
           <h1 className="text-3xl font-bold mb-6 text-yellow-400 text-center">Guild</h1>
           <button className={sidebarButtonStyle} onClick={() => setCurrentView('questBoard')}>View Quest Board</button>
           <button className={sidebarButtonStyle} onClick={() => setCurrentView('playerCard')}>View Player Card</button>
           <button className={sidebarButtonStyle} onClick={() => setCurrentView('logExercise')}>Log Exercise</button>
           <button className={sidebarButtonStyle} onClick={() => setCurrentView('exerciseHistory')}>View Exercise History</button>
-
-          <div className="mt-auto pt-6 text-center"> {/* Pushes "Back to Town" to the bottom */}
-            <Link to="/" className={backToTownButtonStyle}>Back to Town</Link>
-          </div>
+          <Link to="/" className="w-1/2 mx-auto"> {/* Ensure Link takes up the same width as button for consistent styling */}
+            <button className={`${sidebarButtonStyle} w-full`}> {/* Button takes full width of its Link container */}
+              Return to Town
+            </button>
+          </Link>
         </div>
 
         {/* Content Area */}
