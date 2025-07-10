@@ -1,4 +1,4 @@
-import React, { createContext, useReducer, useContext, useEffect } from 'react';
+import React, { createContext, useReducer, useContext, useEffect, useCallback } from 'react';
 
 // Initial state
 import { recalculateUserStats as apiRecalculateUserStats } from '../services/api'; // Added import
@@ -67,15 +67,15 @@ export const GlobalStateProvider = ({ children }) => {
   const [state, dispatch] = useReducer(globalReducer, initialState);
 
   // Actions
-  const loginUser = (userData) => {
+  const loginUser = useCallback((userData) => {
     dispatch({ type: LOGIN_SUCCESS, payload: userData });
-  };
+  }, []);
 
-  const logoutUser = () => {
+  const logoutUser = useCallback(() => {
     dispatch({ type: LOGOUT });
-  };
+  }, []);
 
-  const loadExercises = async () => {
+  const loadExercises = useCallback(async () => {
     dispatch({ type: LOAD_EXERCISES_START });
     try {
       const localExercises = localStorage.getItem('adventurers-town-exercises');
@@ -97,9 +97,9 @@ export const GlobalStateProvider = ({ children }) => {
       console.error('Error loading exercises:', error);
       dispatch({ type: LOAD_EXERCISES_FAIL, payload: error.message });
     }
-  };
+  }, []);
 
-  const recalculateStats = async (userId) => { // Added function
+  const recalculateStats = useCallback(async (userId) => {
     if (!userId) {
       console.error("RecalculateStats: userId is undefined.");
       dispatch({ type: RECALCULATE_STATS_FAIL, payload: "User ID not provided for stat recalculation." });
@@ -120,38 +120,42 @@ export const GlobalStateProvider = ({ children }) => {
       console.error('Error recalculating stats in GlobalState:', error);
       dispatch({ type: RECALCULATE_STATS_FAIL, payload: error.message });
     }
-  };
+  }, []);
 
 
-  const setError = (errorMessage) => {
+  const setError = useCallback((errorMessage) => {
     dispatch({ type: SET_ERROR, payload: errorMessage });
-  };
+  }, []);
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     dispatch({ type: CLEAR_ERROR });
-  };
+  }, []);
 
   // Load exercises on initial mount
   useEffect(() => {
-    if (state.exercises.length === 0) {
+    // Check if exercises are already loaded or if loading is in progress
+    // This check prevents re-fetching if another component instance triggers this effect.
+    if (state.exercises.length === 0 && !state.loadingExercises) {
         loadExercises();
     }
-  }, []);
+  // loadExercises is now wrapped in useCallback, so it's a stable dependency.
+  // state.exercises.length and state.loadingExercises are primitives or part of state, also fine.
+  }, [loadExercises, state.exercises.length, state.loadingExercises]);
 
 
   return (
     <GlobalStateContext.Provider
       value={{
         currentUser: state.currentUser,
-        currentUserDetailedContributions: state.currentUserDetailedContributions, // Added
-        isLoadingStats: state.isLoadingStats, // Added
+        currentUserDetailedContributions: state.currentUserDetailedContributions,
+        isLoadingStats: state.isLoadingStats,
         exercises: state.exercises,
         loadingExercises: state.loadingExercises,
         error: state.error,
         loginUser,
         logoutUser,
         loadExercises,
-        recalculateStats, // Added
+        recalculateStats,
         setError,
         clearError,
       }}
