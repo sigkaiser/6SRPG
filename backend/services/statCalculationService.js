@@ -6,26 +6,16 @@ const EPLEY_CONSTANT = 30;
 const STAT_CAP_RAW_MAX = 1000; // Max value after initial normalization, before sigmoid
 
 const EXPECTED_STAT_CAPS = {
+    // These are the raw score caps before normalization to 1000
+    // Based on user prompt
     upperBodyStrength: 2000,
     lowerBodyStrength: 3000,
     coreStrength: 1500,
     powerExplosiveness: 1800,
-    cardioEndurance: 1000, // This is now the target for raw points from cardio calculations
-    flexibilityMobility: 800,
+    cardioEndurance: 1000, // This might need adjustment based on how it's calculated if not 1RM based
+    flexibilityMobility: 800,  // Same as above
+    // Vitality is in stat_weights but not in User.js, so omitting for now
 };
-
-// Cardio Benchmarks & Settings
-const RUNNING_BENCHMARK_SPEED_KMH = 20; // Elite speed for 1000 raw points
-const CYCLING_BENCHMARK_SPEED_KMH = 40; // Elite speed for 1000 raw points
-const MIN_RUNNING_DURATION_MIN = 5;
-const MIN_RUNNING_DISTANCE_KM = 1.6; // ~1 mile
-const MIN_CYCLING_DURATION_MIN = 10;
-const MIN_CYCLING_DISTANCE_KM = 8; // ~5 miles
-
-// Exercise Categories
-const STRENGTH_POWER_CATEGORIES = ["strength", "powerlifting", "olympic weightlifting", "strongman", "bodybuilding", "calisthenics"];
-const CARDIO_ENDURANCE_CATEGORIES = ["cardio", "running", "cycling", "swimming", "rowing"];
-
 
 // Sigmoid function for smooth RPG-like leveling curve
 function sigmoidScaled(x, maxVal = STAT_CAP_RAW_MAX, slope = 0.005) {
@@ -55,123 +45,74 @@ async function loadStatWeights() {
     }
 }
 
-// Main function to calculate stats
+// Main function to calculate stats (initial structure)
 async function calculateUserStats(userExerciseHistory, exerciseDbData) {
     if (!userExerciseHistory || userExerciseHistory.length === 0) {
-        // Return base stats (which become ~77 after sigmoid)
-        const baseVal = sigmoidScaled(1);
+        console.log('No exercise history provided, returning base stats or zeros.');
+        // Return default or zero stats if no history
         return {
-            upperBodyStrength: baseVal, lowerBodyStrength: baseVal, coreStrength: baseVal,
-            powerExplosiveness: baseVal, cardioEndurance: baseVal, flexibilityMobility: baseVal,
+            upperBodyStrength: 1, lowerBodyStrength: 1, coreStrength: 1,
+            powerExplosiveness: 1, cardioEndurance: 1, flexibilityMobility: 1,
             detailedContributions: {}
         };
     }
 
     const statWeights = await loadStatWeights();
+
+    // Create a map for quick lookup of exercise metadata
     const exerciseMetadataMap = new Map();
-    exerciseDbData.forEach(ex => exerciseMetadataMap.set(ex.name.toLowerCase(), ex));
-
-    const strengthPowerLogs = [];
-    const cardioLogs = [];
-    const otherLogs = []; // For exercises that might contribute to flexibility via equipment, etc.
-
-    // Separate logs by primary calculation type
-    for (const loggedEx of userExerciseHistory) {
-        if (!loggedEx.type || !exerciseMetadataMap.has(loggedEx.type.toLowerCase())) {
-            // console.warn(`Skipping log: type missing or not in DB - ${loggedEx.type}`);
-            continue;
-        }
-        const exerciseInfo = exerciseMetadataMap.get(loggedEx.type.toLowerCase());
-        const category = exerciseInfo.category ? exerciseInfo.category.toLowerCase() : null;
-
-        if (category && STRENGTH_POWER_CATEGORIES.includes(category)) {
-            // Validate data needed for strength/power
-            if (typeof loggedEx.weight === 'number' && typeof loggedEx.reps === 'number') {
-                strengthPowerLogs.push(loggedEx);
-            } else {
-                // console.warn(`Skipping strength/power log due to missing weight/reps: ${JSON.stringify(loggedEx)}`);
-            }
-        } else if (category && CARDIO_ENDURANCE_CATEGORIES.includes(category)) {
-             // Validate data needed for cardio (distanceKm, durationMin will be checked in the helper)
-            cardioLogs.push(loggedEx);
-        } else {
-            // These might still contribute to flexibility if they use specific equipment like "foam roll"
-            // and are processed by the "strength" path's logic for equipment.
-            // Or if they are generic exercises with some primary/secondary muscle weights.
-            // For now, we'll add them to a list that can be processed similarly to strength logs
-            // but without necessarily requiring 1RM (e.g. if weight/reps are 0 or not applicable).
-            // This primarily allows Flexibility contributions from non-strength, non-cardio items.
-            if (typeof loggedEx.weight !== 'number' || typeof loggedEx.reps !== 'number') {
-                // If weight/reps aren't numbers, set to 0 to allow processing for other attributes
-                // like equipment (e.g. foam roll) without breaking 1RM calc.
-                otherLogs.push({...loggedEx, weight: loggedEx.weight || 0, reps: loggedEx.reps || 0});
-            } else {
-                otherLogs.push(loggedEx);
-            }
-        }
+    for (const ex of exerciseDbData) {
+        exerciseMetadataMap.set(ex.name.toLowerCase(), ex);
     }
 
-    // Initialize rawStats and detailedContributions
-    const rawStats = {
-        upperBodyStrength: 0, lowerBodyStrength: 0, coreStrength: 0,
-        powerExplosiveness: 0, cardioEndurance: 0, flexibilityMobility: 0,
-    };
-    const detailedContributions = {};
+    // 1. Identify Strongest Lifts for each exercise type
+    const strongestLifts = {}; // Store strongest lift for each exercise type (name)
 
-    // 1. Process Strength/Power Logs (1RM-based)
-    const strongestLifts = {};
-    for (const loggedEx of strengthPowerLogs) {
+    for (const loggedEx of userExerciseHistory) {
+        if (!loggedEx.type || typeof loggedEx.weight !== 'number' || typeof loggedEx.reps !== 'number') {
+            // console.warn(`Skipping logged exercise due to missing type, weight, or reps: ${JSON.stringify(loggedEx)}`);
+            continue;
+        }
+
         const oneRm = calculateOneRm(loggedEx.weight, loggedEx.reps);
         const exerciseNameLower = loggedEx.type.toLowerCase();
-        const exerciseInfo = exerciseMetadataMap.get(exerciseNameLower); // Already checked it exists
+        const exerciseInfo = exerciseMetadataMap.get(exerciseNameLower);
+
+        if (!exerciseInfo) {
+            // console.warn(`Exercise "${loggedEx.type}" not found in Exercise DB. Skipping.`);
+            continue;
+        }
+
+        // Filter by category - only include exercises suitable for 1RM calculation
+        const RMCategories = ["strength", "powerlifting", "olympic weightlifting", "strongman"];
+        if (!exerciseInfo.category || !RMCategories.includes(exerciseInfo.category.toLowerCase())) {
+            // console.log(`Skipping ${loggedEx.type} as its category '${exerciseInfo.category}' is not 1RM relevant.`);
+            continue;
+        }
 
         if (!strongestLifts[exerciseInfo.name] || oneRm > strongestLifts[exerciseInfo.name].oneRm) {
             strongestLifts[exerciseInfo.name] = {
-                name: exerciseInfo.name,
+                name: exerciseInfo.name, // Use the canonical name from DB
                 oneRm: oneRm,
                 primaryMuscles: exerciseInfo.primaryMuscles || [],
                 secondaryMuscles: exerciseInfo.secondaryMuscles || [],
                 force: exerciseInfo.force,
                 mechanic: exerciseInfo.mechanic,
-                level: exerciseInfo.level,
+                level: exerciseInfo.level, // This is difficulty
                 equipment: exerciseInfo.equipment,
+                // Store original logged exercise for reference if needed later
+                // loggedExercise: loggedEx
             };
         }
     }
+
     const processedStrongestLifts = Object.values(strongestLifts);
 
-    // Process "other" logs - these are not for primary strength 1RM, but may contribute via equipment/muscles
-    // e.g., a "Foam Rolling" exercise (category: 'flexibility', equipment: 'foam roll')
-    // We treat its "1RM" as 1 if not applicable, so its weights apply directly.
-    // This is a simplified way to include non-strength, non-cardio specific exercises.
-    const processedOtherLifts = [];
-    for (const loggedEx of otherLogs) {
-        const exerciseNameLower = loggedEx.type.toLowerCase();
-        const exerciseInfo = exerciseMetadataMap.get(exerciseNameLower);
-         if (exerciseInfo) { // Should always be true based on earlier filter
-            processedOtherLifts.push({
-                name: exerciseInfo.name,
-                oneRm: (loggedEx.weight > 0 && loggedEx.reps > 0) ? calculateOneRm(loggedEx.weight, loggedEx.reps) : 1, // Use 1RM if available, else 1 to apply weights
-                primaryMuscles: exerciseInfo.primaryMuscles || [],
-                secondaryMuscles: exerciseInfo.secondaryMuscles || [],
-                force: exerciseInfo.force,
-                mechanic: exerciseInfo.mechanic,
-                level: exerciseInfo.level,
-                equipment: exerciseInfo.equipment,
-            });
-        }
-    }
-
-    // Combine strongest strength lifts and other relevant exercises for weight calculation
-    const allWeightedLifts = [...processedStrongestLifts, ...processedOtherLifts];
-
-
-    if (allWeightedLifts.length === 0 && cardioLogs.length === 0) {
-        console.log('No relevant exercises found after filtering for strength, power, cardio, or other contributors.');
-        const baseVal = sigmoidScaled(1); // All stats to base if no data
-        return {
-            upperBodyStrength: baseVal, lowerBodyStrength: baseVal, coreStrength: baseVal,
-            powerExplosiveness: baseVal, cardioEndurance: baseVal, flexibilityMobility: baseVal,
+    if (processedStrongestLifts.length === 0) {
+        console.log('No 1RM-relevant strongest lifts found after filtering.');
+         return {
+            upperBodyStrength: 1, lowerBodyStrength: 1, coreStrength: 1,
+            powerExplosiveness: 1, cardioEndurance: 1, flexibilityMobility: 1,
             detailedContributions: {}
         };
     }
@@ -183,8 +124,8 @@ async function calculateUserStats(userExerciseHistory, exerciseDbData) {
         "CoreStrength": "coreStrength",
         "PowerExplosiveness": "powerExplosiveness",
         "CardioEndurance": "cardioEndurance",
-        "FlexibilityMobility": "flexibilityMobility"
-        // Vitality removed as it's no longer a calculated stat
+        "FlexibilityMobility": "flexibilityMobility",
+        "Vitality": "vitality" // Though we are currently ignoring vitality
     };
     const getStatKeyConsistent = (statName) => statKeyMap[statName] || statName;
 
@@ -196,10 +137,9 @@ async function calculateUserStats(userExerciseHistory, exerciseDbData) {
     };
     const detailedContributions = {};
 
-    // 2. Calculate contributions from Strength/Power lifts and Other lifts
-    // This loop processes all lifts that contribute based on 1RM (or effective 1RM of 1 for 'other') and their attributes
-    for (const lift of allWeightedLifts) { // Changed from processedStrongestLifts to allWeightedLifts
-        const liftStatContributions = {};
+    // 2. Build Weighted Stat Vectors for Strongest Lifts & 3. Apply Lift Value & Aggregate Raw Stats
+    for (const lift of processedStrongestLifts) {
+        const liftStatContributions = {}; // Temporary vector for this lift's weights
 
         // Primary Muscles (100% weight)
         for (const muscle of lift.primaryMuscles) {
@@ -304,76 +244,6 @@ module.exports = {
     loadStatWeights, // Exporting for potential testing
     // No, don't export loadExerciseDb directly from here if it's only used by the route
 };
-
-
-// Helper function to calculate raw cardio endurance points
-function _calculate_raw_cardio_endurance(cardioLogs, exerciseMetadataMap, statWeights) {
-    let bestRunningPerformance = { speed: 0, rawPoints: 0, details: null };
-    let bestCyclingPerformance = { speed: 0, rawPoints: 0, details: null };
-
-    for (const loggedEx of cardioLogs) {
-        // Ensure loggedEx has type, and that type can be found in exerciseMetadataMap
-        if (!loggedEx.type || !exerciseMetadataMap.has(loggedEx.type.toLowerCase())) {
-            // console.warn(`Skipping cardio log due to missing type or type not in DB: ${JSON.stringify(loggedEx)}`);
-            continue;
-        }
-        const exerciseInfo = exerciseMetadataMap.get(loggedEx.type.toLowerCase());
-        const category = exerciseInfo.category ? exerciseInfo.category.toLowerCase() : null;
-
-        // Ensure distance and duration are numbers and positive
-        const distanceKm = typeof loggedEx.distanceKm === 'number' && loggedEx.distanceKm > 0 ? loggedEx.distanceKm : 0;
-        const durationMin = typeof loggedEx.durationMin === 'number' && loggedEx.durationMin > 0 ? loggedEx.durationMin : 0;
-
-        if (distanceKm === 0 || durationMin === 0) {
-            // console.warn(`Skipping cardio log due to invalid distance or duration: ${JSON.stringify(loggedEx)}`);
-            continue;
-        }
-
-        const currentSpeedKmh = distanceKm / (durationMin / 60);
-
-        if (category === 'running') {
-            if (durationMin >= MIN_RUNNING_DURATION_MIN || distanceKm >= MIN_RUNNING_DISTANCE_KM) {
-                if (currentSpeedKmh > bestRunningPerformance.speed) {
-                    const rawPoints = Math.min(STAT_CAP_RAW_MAX, (currentSpeedKmh / RUNNING_BENCHMARK_SPEED_KMH) * STAT_CAP_RAW_MAX);
-                    bestRunningPerformance = {
-                        speed: currentSpeedKmh,
-                        rawPoints: rawPoints,
-                        details: {
-                            exerciseName: `${exerciseInfo.name} (Best Sustained Pace)`,
-                            value: `${currentSpeedKmh.toFixed(2)} km/h (${distanceKm}km in ${durationMin}min)`,
-                            pointsContribution: parseFloat(rawPoints.toFixed(2))
-                        }
-                    };
-                }
-            }
-        } else if (category === 'cycling') {
-            if (durationMin >= MIN_CYCLING_DURATION_MIN || distanceKm >= MIN_CYCLING_DISTANCE_KM) {
-                if (currentSpeedKmh > bestCyclingPerformance.speed) {
-                    const rawPoints = Math.min(STAT_CAP_RAW_MAX, (currentSpeedKmh / CYCLING_BENCHMARK_SPEED_KMH) * STAT_CAP_RAW_MAX);
-                    bestCyclingPerformance = {
-                        speed: currentSpeedKmh,
-                        rawPoints: rawPoints,
-                        details: {
-                            exerciseName: `${exerciseInfo.name} (Best Sustained Pace)`,
-                            value: `${currentSpeedKmh.toFixed(2)} km/h (${distanceKm}km in ${durationMin}min)`,
-                            pointsContribution: parseFloat(rawPoints.toFixed(2))
-                        }
-                    };
-                }
-            }
-        }
-        // TODO: Could add cases for swimming, rowing if benchmarks defined
-    }
-
-    if (bestRunningPerformance.rawPoints >= bestCyclingPerformance.rawPoints && bestRunningPerformance.rawPoints > 0) {
-        return { rawCardioEndurance: bestRunningPerformance.rawPoints, details: bestRunningPerformance.details };
-    } else if (bestCyclingPerformance.rawPoints > 0) {
-        return { rawCardioEndurance: bestCyclingPerformance.rawPoints, details: bestCyclingPerformance.details };
-    }
-
-    return { rawCardioEndurance: 0, details: null }; // Default if no qualifying cardio
-}
-
 
 // Helper function to fetch the exercise DB data (similar to frontend)
 // This could be in a more generic helper/utils file if used elsewhere in backend

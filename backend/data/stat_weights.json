@@ -21,7 +21,8 @@
     "calves": {
       "LowerBodyStrength": 0.3,
       "PowerExplosiveness": 0.3,
-      "CardioEndurance": 0.1
+      "CardioEndurance": 0.2,
+      "FlexibilityMobility": 0.1
     },
     "chest": {
       "UpperBodyStrength": 1.0,
@@ -39,8 +40,7 @@
     "shoulders": {
       "UpperBodyStrength": 0.7,
       "CoreStrength": 0.1,
-      "FlexibilityMobility": 0.1,
-      "PowerExplosiveness": 0.1
+      "FlexibilityMobility": 0.1
     },
     "traps": {
       "UpperBodyStrength": 0.7,
@@ -48,9 +48,9 @@
       "PowerExplosiveness": 0.3
     },
     "lats": {
-      "UpperBodyStrength": 0.7,
+      "UpperBodyStrength": 0.6,
       "CoreStrength": 0.1,
-      "PowerExplosiveness": 0.2
+      "Vitality": 0.2
     },
     "middle back": {
       "UpperBodyStrength": 0.6,
@@ -58,8 +58,7 @@
     },
     "lower back": {
       "CoreStrength": 0.6,
-      "PowerExplosiveness": 0.2,
-      "FlexibilityMobility": 0.1
+      "PowerExplosiveness": 0.2
     },
     "forearms": {
       "UpperBodyStrength": 0.5
@@ -68,20 +67,17 @@
       "UpperBodyStrength": 0.3
     },
     "adductors": {
-      "LowerBodyStrength": 0.5,
-      "FlexibilityMobility": 0.1
+      "LowerBodyStrength": 0.5
     },
     "abductors": {
-      "LowerBodyStrength": 0.5,
-      "FlexibilityMobility": 0.1
+      "LowerBodyStrength": 0.5
     }
   },
   "force": {
     "static": {
-      "CoreStrength": 0.5,
-      "CardioEndurance": 0.2,
-      "FlexibilityMobility": 0.0,
-      "PowerExplosiveness": 0.0
+      "CoreStrength": 0.3,
+      "CardioEndurance": 0.1,
+      "FlexibilityMobility": 0.4
     },
     "pull": {
       "UpperBodyStrength": 0.5,
@@ -99,25 +95,25 @@
       "UpperBodyStrength": 0.3,
       "LowerBodyStrength": 0.3,
       "CoreStrength": 0.3,
-      "PowerExplosiveness": 0.0,
-      "CardioEndurance": 0.1,
-      "FlexibilityMobility": 0.1
+      "PowerExplosiveness": 0.1,
+      "CardioEndurance": 0.2,
+      "FlexibilityMobility": 0.3
     },
     "intermediate": {
       "UpperBodyStrength": 0.5,
       "LowerBodyStrength": 0.5,
       "CoreStrength": 0.4,
       "PowerExplosiveness": 0.3,
-      "CardioEndurance": 0.2,
-      "FlexibilityMobility": 0.2
+      "CardioEndurance": 0.4,
+      "FlexibilityMobility": 0.4
     },
     "expert": {
       "UpperBodyStrength": 0.7,
       "LowerBodyStrength": 0.7,
       "CoreStrength": 0.5,
       "PowerExplosiveness": 0.5,
-      "CardioEndurance": 0.2,
-      "FlexibilityMobility": 0.2
+      "CardioEndurance": 0.5,
+      "FlexibilityMobility": 0.5
     }
   },
   "mechanic": {
