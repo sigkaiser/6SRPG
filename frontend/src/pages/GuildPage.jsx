@@ -9,46 +9,40 @@ import guildBg from '../../assets/guild-bg.png';
 const GuildPage = () => {
   const { currentUser, error: globalError, clearError } = useGlobalState();
   // currentView now manages states within the logged-in Guild experience
-  const [currentView, setCurrentView] = useState('loggedInMain');
+  // Default view is 'questBoard'
+  const [currentView, setCurrentView] = useState('questBoard');
 
   useEffect(() => {
     if (currentUser) {
       clearError();
-      const isKnownSubView = currentView === 'playerCard' || currentView === 'logExercise' || currentView === 'exerciseHistory';
-      // Only set to 'loggedInMain' if it's not a known sub-view AND it's not already 'loggedInMain'.
-      // This prevents unnecessary re-renders and potential loops.
-      if (!isKnownSubView && currentView !== 'loggedInMain') {
-        setCurrentView('loggedInMain');
-      }
+      // No need to reset currentView to 'loggedInMain' as the sidebar handles navigation.
+      // If currentView is not a recognized one, it defaults to 'questBoard' or you can add specific logic.
     }
-    // No 'else' needed here as redirection for non-logged-in users will be handled by App.jsx's ProtectedRoute
-  }, [currentUser, clearError, currentView]);
+    // Redirection for non-logged-in users is handled by App.jsx's ProtectedRoute
+  }, [currentUser, clearError]);
 
   const pageDynamicStyle = {
     backgroundImage: `url(${guildBg})`,
     backgroundSize: 'cover',
     backgroundPosition: 'center center',
     backgroundRepeat: 'no-repeat',
-    height: '100vh',
+    minHeight: '100vh', // Ensure it covers the full viewport height
     width: '100vw',
+    display: 'flex', // Using flex to align children (main content wrapper)
+    alignItems: 'center', // Vertically center the main content wrapper
+    justifyContent: 'center', // Horizontally center the main content wrapper
+    padding: '20px', // Add some padding around the main content wrapper
   };
 
   const baseButtonStyle =
-    'inline-block py-2 px-5 mx-2 my-2 text-base font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-opacity-75 transition-transform transform hover:scale-105';
-  // primaryButtonStyle is no longer needed for login/register
-  const secondaryButtonStyle = `${baseButtonStyle} bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500`;
-  const backButtonStyle = `${baseButtonStyle} bg-gray-700 hover:bg-gray-800 text-yellow-400 focus:ring-gray-600`;
+    'w-full text-left py-3 px-5 my-1 text-base font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-opacity-75 transition-transform transform hover:scale-105';
+  const sidebarButtonStyle = `${baseButtonStyle} bg-gray-700 hover:bg-gray-600 text-yellow-400 focus:ring-gray-500`;
+  // active style for sidebar buttons can be added if desired, e.g., based on currentView
+  // const activeSidebarButtonStyle = `${sidebarButtonStyle} bg-gray-600 ring-2 ring-yellow-500`;
+  const backToTownButtonStyle = `inline-block py-2 px-5 mx-2 my-2 text-base font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-opacity-75 transition-transform transform hover:scale-105 bg-gray-700 hover:bg-gray-800 text-yellow-400 focus:ring-gray-600`;
 
-  // If currentUser is not available, App.jsx should redirect.
-  // As a fallback, or if direct access is attempted and somehow bypasses App.jsx logic (unlikely with proper setup),
-  // this ensures nothing is rendered or navigates away.
+
   if (!currentUser) {
-    // This Navigate component will ideally be handled by ProtectedRoute in App.jsx,
-    // but it's a safeguard. In a strict setup, you might return null or a loading spinner
-    // expecting App.jsx to handle the redirection.
-    // For this step, we assume App.jsx will handle it, so this component focuses on the logged-in state.
-    // However, returning <Navigate to="/" /> here would be a more robust direct protection.
-    // Let's return a minimal message, assuming ProtectedRoute handles the redirect.
     return (
         <div style={pageDynamicStyle} className="relative flex flex-col items-center justify-center p-5 text-white">
             <p>Loading Guild... If you are not redirected, please <Link to="/" className="text-yellow-400 hover:text-yellow-300">return to Town</Link> to log in.</p>
@@ -56,71 +50,63 @@ const GuildPage = () => {
     );
   }
 
-  const renderLoggedInContent = () => {
+  const renderContentArea = () => {
     switch (currentView) {
-      case 'loggedInMain':
+      case 'questBoard':
         return (
-          <div>
-            <h1 className="text-3xl font-bold mb-4 text-yellow-400">Adventurer's Guild</h1>
-            <h2 className="text-2xl font-semibold mb-3">
-              Welcome back, <span className="text-yellow-400">{currentUser.username}</span>!
-            </h2>
-            <p className="text-md mb-6">What would you like to do?</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <button className={secondaryButtonStyle} onClick={() => setCurrentView('playerCard')}>View Player Card</button>
-              <button className={secondaryButtonStyle} onClick={() => setCurrentView('logExercise')}>Log Exercise</button>
-              <button className={secondaryButtonStyle} onClick={() => setCurrentView('exerciseHistory')}>View Exercise History</button>
-            </div>
+          <div className="p-6 bg-gray-800 bg-opacity-70 rounded-lg shadow-xl">
+            <h2 className="text-2xl font-bold mb-4 text-yellow-400">Quest Board</h2>
+            <p>This is the Quest Board. Epic adventures await!</p>
+            <p className="mt-2 text-sm text-gray-300">(Placeholder content - full implementation coming soon!)</p>
           </div>
         );
       case 'playerCard':
-        return (
-          <div>
-            <PlayerCard />
-            <button className={backButtonStyle + ' mt-4'} onClick={() => setCurrentView('loggedInMain')}>Back to Guild Menu</button>
-          </div>
-        );
+        return <PlayerCard />; // PlayerCard might need internal styling adjustments for this new layout
       case 'logExercise':
-        return (
-          <div>
-            <ExerciseLogForm onLogSuccess={() => setCurrentView('loggedInMain')} />
-            <button className={backButtonStyle + ' mt-4'} onClick={() => setCurrentView('loggedInMain')}>Back to Guild Menu</button>
-          </div>
-        );
+        // onLogSuccess can navigate to 'questBoard' or 'playerCard' or stay, depending on desired UX
+        return <ExerciseLogForm onLogSuccess={() => setCurrentView('questBoard')} />;
       case 'exerciseHistory':
-        return (
-          <div>
-            <ExerciseHistory />
-            <button className={backButtonStyle + ' mt-4'} onClick={() => setCurrentView('loggedInMain')}>Back to Guild Menu</button>
-          </div>
-        );
+        return <ExerciseHistory />; // ExerciseHistory might need internal styling adjustments
       default:
-        // This case should ideally not be reached if currentView is managed properly.
-        // Reset to 'loggedInMain' as a fallback.
-        setCurrentView('loggedInMain');
+        // Fallback to questBoard if currentView is unrecognized
+        setCurrentView('questBoard');
         return null;
     }
   };
 
   return (
-    <div style={pageDynamicStyle} className="relative flex flex-col items-center justify-center p-5 text-white overflow-hidden">
-      <div className="absolute inset-0 bg-black bg-opacity-50 z-0" />
-      <div className="relative z-10 bg-gray-900 bg-opacity-80 p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-2xl lg:max-w-3xl backdrop-blur-sm">
-        {/* Global errors can still be relevant for actions within the guild for a logged-in user */}
-        {globalError && (
-          <div className="bg-red-600 bg-opacity-90 border border-red-700 text-white p-3 mb-5 rounded-md shadow-lg">
-            <p className="font-semibold">Error: {globalError}</p>
-            <button
-              onClick={clearError}
-              className={`${secondaryButtonStyle} bg-red-500 hover:bg-red-400 text-xs mt-2 py-1 px-2`}
-            >
-              Dismiss
-            </button>
+    <div style={pageDynamicStyle} className="text-white overflow-hidden">
+      {/* Overall wrapper for sidebar and content, with background opacity and blur */}
+      <div className="flex w-full h-full max-w-6xl bg-gray-900 bg-opacity-80 rounded-xl shadow-2xl backdrop-blur-sm overflow-hidden" style={{maxHeight: '90vh'}}>
+
+        {/* Sidebar */}
+        <div className="w-1/3 max-w-xs bg-gray-800 bg-opacity-60 p-6 flex flex-col space-y-4 overflow-y-auto">
+          <h1 className="text-3xl font-bold mb-6 text-yellow-400 text-center">Guild</h1>
+          <button className={sidebarButtonStyle} onClick={() => setCurrentView('questBoard')}>View Quest Board</button>
+          <button className={sidebarButtonStyle} onClick={() => setCurrentView('playerCard')}>View Player Card</button>
+          <button className={sidebarButtonStyle} onClick={() => setCurrentView('logExercise')}>Log Exercise</button>
+          <button className={sidebarButtonStyle} onClick={() => setCurrentView('exerciseHistory')}>View Exercise History</button>
+
+          <div className="mt-auto pt-6 text-center"> {/* Pushes "Back to Town" to the bottom */}
+            <Link to="/" className={backToTownButtonStyle}>Back to Town</Link>
           </div>
-        )}
-        {renderLoggedInContent()}
-        <div className="mt-8 text-center">
-          <Link to="/" className={backButtonStyle}>Back to Town</Link>
+        </div>
+
+        {/* Content Area */}
+        <div className="flex-1 p-6 sm:p-8 overflow-y-auto">
+          {globalError && (
+            <div className="bg-red-600 bg-opacity-90 border border-red-700 text-white p-3 mb-5 rounded-md shadow-lg">
+              <p className="font-semibold">Error: {globalError}</p>
+              <button
+                onClick={clearError}
+                // Using a more generic button style or define one if secondaryButtonStyle was removed/changed
+                className={`py-1 px-2 mt-2 text-xs rounded-md bg-red-500 hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-opacity-75`}
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+          {renderContentArea()}
         </div>
       </div>
     </div>
