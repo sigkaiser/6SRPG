@@ -23,7 +23,7 @@ const GuildPage = () => {
       }
     }
     // No 'else' needed here as redirection for non-logged-in users will be handled by App.jsx's ProtectedRoute
-  }, [currentUser, clearError, currentView]);
+  }, [currentUser, clearError]); // Removed currentView from dependencies
 
   const pageDynamicStyle = {
     backgroundImage: `url(${guildBg})`,
