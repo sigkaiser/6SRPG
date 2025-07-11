@@ -15,7 +15,23 @@ const EXPECTED_STAT_CAPS = {
     // Vitality removed
 };
 
-// Tracked stats list - source of truth for stats we process
+// For mapping keys from stat_weights.json (PascalCase) to internal keys (camelCase)
+const STAT_KEY_MAP_PASCAL_TO_CAMEL = {
+    "UpperBodyStrength": "upperBodyStrength",
+    "LowerBodyStrength": "lowerBodyStrength",
+    "CoreStrength": "coreStrength",
+    "PowerExplosiveness": "powerExplosiveness",
+    "CardioEndurance": "cardioEndurance",
+    "FlexibilityMobility": "flexibilityMobility",
+    "Vitality": "vitality" // Include even if not "tracked" for comprehensive mapping from source file
+};
+
+// For mapping internal camelCase keys to PascalCase for stat_weights.json lookups
+const STAT_KEY_MAP_CAMEL_TO_PASCAL = Object.fromEntries(
+    Object.entries(STAT_KEY_MAP_PASCAL_TO_CAMEL).map(([pascal, camel]) => [camel, pascal])
+);
+
+// Tracked stats list - source of truth for stats we process (camelCase)
 const TRACKED_STATS = [
     "upperBodyStrength",
     "lowerBodyStrength",
@@ -54,25 +70,33 @@ async function loadStatWeights() {
 }
 
 // Helper function to check if an exercise is relevant to a specific stat
-function isExerciseRelevantForStat(exerciseInfo, statName, statWeights) {
-    if (!exerciseInfo || !statName || !statWeights) return false;
+function isExerciseRelevantForStat(exerciseInfo, camelCaseStatName, statWeights) { //param renamed
+    if (!exerciseInfo || !camelCaseStatName || !statWeights) return false;
+
+    const pascalCaseStatName = STAT_KEY_MAP_CAMEL_TO_PASCAL[camelCaseStatName];
+    if (!pascalCaseStatName) {
+        // This camelCaseStatName isn't in our defined mappings, so it can't be relevant
+        // or there's an issue with TRACKED_STATS vs STAT_KEY_MAP_CAMEL_TO_PASCAL definitions
+        console.warn(`isExerciseRelevantForStat: Could not find pascalCase mapping for ${camelCaseStatName}`);
+        return false;
+    }
 
     // Check primary muscles
     for (const muscle of exerciseInfo.primaryMuscles || []) {
-        if (statWeights.muscles?.[muscle]?.[statName]) return true;
+        if (statWeights.muscles?.[muscle]?.[pascalCaseStatName]) return true;
     }
     // Check secondary muscles
     for (const muscle of exerciseInfo.secondaryMuscles || []) {
-        if (statWeights.muscles?.[muscle]?.[statName]) return true; // Will be weighted 0.5 later, but still relevant
+        if (statWeights.muscles?.[muscle]?.[pascalCaseStatName]) return true;
     }
     // Check force
-    if (exerciseInfo.force && statWeights.force?.[exerciseInfo.force.toLowerCase()]?.[statName]) return true;
+    if (exerciseInfo.force && statWeights.force?.[exerciseInfo.force.toLowerCase()]?.[pascalCaseStatName]) return true;
     // Check mechanic
-    if (exerciseInfo.mechanic && statWeights.mechanic?.[exerciseInfo.mechanic.toLowerCase()]?.[statName]) return true;
+    if (exerciseInfo.mechanic && statWeights.mechanic?.[exerciseInfo.mechanic.toLowerCase()]?.[pascalCaseStatName]) return true;
     // Check equipment
-    if (exerciseInfo.equipment && statWeights.equipment?.[exerciseInfo.equipment.toLowerCase()]?.[statName]) return true;
+    if (exerciseInfo.equipment && statWeights.equipment?.[exerciseInfo.equipment.toLowerCase()]?.[pascalCaseStatName]) return true;
     // Check difficulty (level) - as per existing logic for potential stat calculation
-    if (exerciseInfo.level && statWeights.difficulty?.[exerciseInfo.level.toLowerCase()]?.[statName]) return true;
+    if (exerciseInfo.level && statWeights.difficulty?.[exerciseInfo.level.toLowerCase()]?.[pascalCaseStatName]) return true;
 
     return false;
 }
@@ -151,11 +175,6 @@ async function calculatePotentialStats(userExerciseHistory, exerciseDbData, stat
         return { ...initialPotentialStats, detailedContributions: {} };
     }
 
-    // Helper to ensure consistent stat key casing (camelCase) - already camelCase in TRACKED_STATS
-    // Vitality removed from statKeyMap implicitly by using TRACKED_STATS
-    const getStatKeyConsistent = (statName) => TRACKED_STATS.includes(statName) ? statName : undefined;
-
-
     // Initialize rawStats and detailedContributions
     const rawStats = TRACKED_STATS.reduce((acc, stat) => {
         acc[stat] = 0;
@@ -165,48 +184,52 @@ async function calculatePotentialStats(userExerciseHistory, exerciseDbData, stat
 
     // 2. Build Weighted Stat Vectors for Strongest Lifts & 3. Apply Lift Value & Aggregate Raw Stats
     for (const lift of processedStrongestLifts) {
-        const liftStatContributions = {};
+        const liftStatContributions = {}; // Stores contributions for THIS lift, using camelCase keys
 
-        for (const muscle of lift.primaryMuscles) {
-            if (statWeights.muscles[muscle]) {
-                for (const [stat, weight] of Object.entries(statWeights.muscles[muscle])) {
-                    const consistentStatKey = getStatKeyConsistent(stat);
-                    if (consistentStatKey && rawStats.hasOwnProperty(consistentStatKey)) {
-                        liftStatContributions[consistentStatKey] = (liftStatContributions[consistentStatKey] || 0) + weight;
+        // Iterate over categories of stat weights (muscles, force, etc.)
+        // Primary Muscles (100% weight)
+        for (const muscle of lift.primaryMuscles || []) {
+            if (statWeights.muscles?.[muscle]) {
+                for (const [pascalCaseStat, weight] of Object.entries(statWeights.muscles[muscle])) {
+                    const camelCaseStatKey = STAT_KEY_MAP_PASCAL_TO_CAMEL[pascalCaseStat];
+                    if (camelCaseStatKey && TRACKED_STATS.includes(camelCaseStatKey)) {
+                        liftStatContributions[camelCaseStatKey] = (liftStatContributions[camelCaseStatKey] || 0) + weight;
                     }
                 }
             }
         }
 
-        for (const muscle of lift.secondaryMuscles) {
-            if (statWeights.muscles[muscle]) {
-                for (const [stat, weight] of Object.entries(statWeights.muscles[muscle])) {
-                    const consistentStatKey = getStatKeyConsistent(stat);
-                     if (consistentStatKey && rawStats.hasOwnProperty(consistentStatKey)) {
-                        liftStatContributions[consistentStatKey] = (liftStatContributions[consistentStatKey] || 0) + (weight * 0.5);
+        // Secondary Muscles (50% weight)
+        for (const muscle of lift.secondaryMuscles || []) {
+            if (statWeights.muscles?.[muscle]) {
+                for (const [pascalCaseStat, weight] of Object.entries(statWeights.muscles[muscle])) {
+                    const camelCaseStatKey = STAT_KEY_MAP_PASCAL_TO_CAMEL[pascalCaseStat];
+                    if (camelCaseStatKey && TRACKED_STATS.includes(camelCaseStatKey)) {
+                        liftStatContributions[camelCaseStatKey] = (liftStatributions[camelCaseStatKey] || 0) + (weight * 0.5);
                     }
                 }
             }
         }
 
-        const otherCategories = ['force', 'mechanic', 'equipment'];
-        // Include difficulty (level) as per original potential calculation logic
-        if (lift.level && statWeights.difficulty && statWeights.difficulty[lift.level.toLowerCase()]) {
-             for (const [stat, weight] of Object.entries(statWeights.difficulty[lift.level.toLowerCase()])) {
-                const consistentStatKey = getStatKeyConsistent(stat);
-                if (consistentStatKey && rawStats.hasOwnProperty(consistentStatKey)) {
-                    liftStatContributions[consistentStatKey] = (liftStatContributions[consistentStatKey] || 0) + weight;
+        // Difficulty (Level) - contributes to potential stat calculation
+        if (lift.level && statWeights.difficulty?.[lift.level.toLowerCase()]) {
+            for (const [pascalCaseStat, weight] of Object.entries(statWeights.difficulty[lift.level.toLowerCase()])) {
+                const camelCaseStatKey = STAT_KEY_MAP_PASCAL_TO_CAMEL[pascalCaseStat];
+                if (camelCaseStatKey && TRACKED_STATS.includes(camelCaseStatKey)) {
+                    liftStatContributions[camelCaseStatKey] = (liftStatContributions[camelCaseStatKey] || 0) + weight;
                 }
             }
         }
 
-        for (const category of otherCategories) {
-            const liftProperty = lift[category];
-            if (liftProperty && statWeights[category] && statWeights[category][liftProperty.toLowerCase()]) {
-                for (const [stat, weight] of Object.entries(statWeights[category][liftProperty.toLowerCase()])) {
-                    const consistentStatKey = getStatKeyConsistent(stat);
-                    if (consistentStatKey && rawStats.hasOwnProperty(consistentStatKey)) {
-                        liftStatContributions[consistentStatKey] = (liftStatContributions[consistentStatKey] || 0) + weight;
+        // Other categories: Force, Mechanic, Equipment
+        const otherMetadataCategories = ['force', 'mechanic', 'equipment'];
+        for (const categoryKey of otherMetadataCategories) { // e.g. categoryKey is 'force'
+            const liftPropertyValue = lift[categoryKey]; // e.g. lift.force value like 'push'
+            if (liftPropertyValue && statWeights[categoryKey]?.[liftPropertyValue.toLowerCase()]) {
+                for (const [pascalCaseStat, weight] of Object.entries(statWeights[categoryKey][liftPropertyValue.toLowerCase()])) {
+                    const camelCaseStatKey = STAT_KEY_MAP_PASCAL_TO_CAMEL[pascalCaseStat];
+                    if (camelCaseStatKey && TRACKED_STATS.includes(camelCaseStatKey)) {
+                        liftStatContributions[camelCaseStatKey] = (liftStatContributions[camelCaseStatKey] || 0) + weight;
                     }
                 }
             }
