@@ -96,20 +96,37 @@ const PlayerCard = () => {
       {error && !isLoadingStats && <p className="text-center text-red-400 my-3">Error calculating stats: {error}</p>}
 
       <h4 className="text-xl font-semibold text-yellow-400 mb-2 text-center">Stats:</h4>
-      <ul className="list-none p-0 space-y-1">
+      <ul className="list-none p-0 space-y-2"> {/* Increased space-y for two lines */}
         {Object.entries(stats)
-          .filter(([key]) => key !== 'id' && key !== '_id' && key !== '__v') // Filter out non-stat fields if any creep in
-          .map(([key, value], index, arr) => (
-          <li
-            key={key}
-            className={`py-2 px-3 bg-gray-700 rounded-md cursor-pointer hover:bg-gray-600 transition-colors ${index === arr.length - 1 ? '' : 'border-b border-gray-600'}`}
-            onClick={() => handleStatClick(key)}
-            title={`Click to see details for ${formatStatKey(key)}`}
-          >
-            <span className="capitalize text-gray-300">{formatStatKey(key)}: </span>
-            <span className="font-semibold text-yellow-300">{value || 0}</span>
-          </li>
-        ))}
+          .filter(([key]) => key !== 'id' && key !== '_id' && key !== '__v' && typeof stats[key] === 'object' && stats[key] !== null) // Ensure it's an object (new structure)
+          .map(([statKey, statObjValue]) => {
+            const { current, potential, xp, xpToNext } = statObjValue || {}; // Destructure with defaults
+
+            return (
+              <li
+                key={statKey}
+                className="py-2 px-3 bg-gray-700 rounded-md cursor-pointer hover:bg-gray-600 transition-colors"
+                onClick={() => handleStatClick(statKey)}
+                title={`Click to see detailed exercise contributions for ${formatStatKey(statKey)}`}
+              >
+                <div className="flex justify-between items-center">
+                  <span className="capitalize text-gray-300">{formatStatKey(statKey)}: </span>
+                  {typeof potential === 'number' ? (
+                    <span className="font-semibold text-yellow-300">
+                      {current || 0} <span className="text-xs text-gray-400">current</span> / {potential} <span className="text-xs text-gray-400">potential</span>
+                    </span>
+                  ) : (
+                    <span className="font-semibold text-gray-500">N/A</span>
+                  )}
+                </div>
+                {typeof potential === 'number' && ( // Only show XP if potential is calculated
+                  <div className="text-xs text-gray-400 mt-1">
+                    XP: {xp || 0} / {xpToNext || 'N/A'}
+                  </div>
+                )}
+              </li>
+            );
+          })}
       </ul>
 
       {selectedStatForDetails && currentUserDetailedContributions && (

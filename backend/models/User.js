@@ -47,11 +47,43 @@ const UserSchema = new Schema({
   level: { type: Number, default: 1 },
   experience: { type: Number, default: 0 },
   stats: {
-    upperBodyStrength: { type: Number, default: 5 },
-    lowerBodyStrength: { type: Number, default: 5 },
-    coreStrength: { type: Number, default: 5 },
-    powerExplosiveness: { type: Number, default: 5 },
-    flexibilityMobility: { type: Number, default: 5 }
+    upperBodyStrength: {
+      current: { type: Number, default: null },
+      potential: { type: Number, default: null },
+      xp: { type: Number, default: 0 },
+      xpToNext: { type: Number, default: 0 }
+    },
+    lowerBodyStrength: {
+      current: { type: Number, default: null },
+      potential: { type: Number, default: null },
+      xp: { type: Number, default: 0 },
+      xpToNext: { type: Number, default: 0 }
+    },
+    coreStrength: {
+      current: { type: Number, default: null },
+      potential: { type: Number, default: null },
+      xp: { type: Number, default: 0 },
+      xpToNext: { type: Number, default: 0 }
+    },
+    powerExplosiveness: {
+      current: { type: Number, default: null },
+      potential: { type: Number, default: null },
+      xp: { type: Number, default: 0 },
+      xpToNext: { type: Number, default: 0 }
+    },
+    flexibilityMobility: {
+      current: { type: Number, default: null },
+      potential: { type: Number, default: null },
+      xp: { type: Number, default: 0 },
+      xpToNext: { type: Number, default: 0 }
+    },
+    cardioEndurance: { // Added cardioEndurance
+      current: { type: Number, default: null },
+      potential: { type: Number, default: null },
+      xp: { type: Number, default: 0 },
+      xpToNext: { type: Number, default: 0 }
+    }
+    // Vitality is intentionally omitted
   },
   titles: [String],
   achievements: [String],

@@ -6,16 +6,24 @@ const EPLEY_CONSTANT = 30;
 const STAT_CAP_RAW_MAX = 1000; // Max value after initial normalization, before sigmoid
 
 const EXPECTED_STAT_CAPS = {
-    // These are the raw score caps before normalization to 1000
-    // Based on user prompt
     upperBodyStrength: 2000,
     lowerBodyStrength: 3000,
     coreStrength: 1500,
     powerExplosiveness: 1800,
-    cardioEndurance: 1000, // This might need adjustment based on how it's calculated if not 1RM based
-    flexibilityMobility: 800,  // Same as above
-    // Vitality is in stat_weights but not in User.js, so omitting for now
+    cardioEndurance: 1000, // Assuming this is a target raw score like others
+    flexibilityMobility: 800,  // Assuming this is a target raw score like others
+    // Vitality removed
 };
+
+// Tracked stats list - source of truth for stats we process
+const TRACKED_STATS = [
+    "upperBodyStrength",
+    "lowerBodyStrength",
+    "coreStrength",
+    "powerExplosiveness",
+    "cardioEndurance",
+    "flexibilityMobility"
+];
 
 // Sigmoid function for smooth RPG-like leveling curve
 function sigmoidScaled(x, maxVal = STAT_CAP_RAW_MAX, slope = 0.005) {
@@ -45,54 +53,86 @@ async function loadStatWeights() {
     }
 }
 
-// Main function to calculate stats (initial structure)
-async function calculateUserStats(userExerciseHistory, exerciseDbData) {
+// Helper function to check if an exercise is relevant to a specific stat
+function isExerciseRelevantForStat(exerciseInfo, statName, statWeights) {
+    if (!exerciseInfo || !statName || !statWeights) return false;
+
+    // Check primary muscles
+    for (const muscle of exerciseInfo.primaryMuscles || []) {
+        if (statWeights.muscles?.[muscle]?.[statName]) return true;
+    }
+    // Check secondary muscles
+    for (const muscle of exerciseInfo.secondaryMuscles || []) {
+        if (statWeights.muscles?.[muscle]?.[statName]) return true; // Will be weighted 0.5 later, but still relevant
+    }
+    // Check force
+    if (exerciseInfo.force && statWeights.force?.[exerciseInfo.force.toLowerCase()]?.[statName]) return true;
+    // Check mechanic
+    if (exerciseInfo.mechanic && statWeights.mechanic?.[exerciseInfo.mechanic.toLowerCase()]?.[statName]) return true;
+    // Check equipment
+    if (exerciseInfo.equipment && statWeights.equipment?.[exerciseInfo.equipment.toLowerCase()]?.[statName]) return true;
+    // Check difficulty (level) - as per existing logic for potential stat calculation
+    if (exerciseInfo.level && statWeights.difficulty?.[exerciseInfo.level.toLowerCase()]?.[statName]) return true;
+
+    return false;
+}
+
+
+// Main function to calculate POTENTIAL stats
+async function calculatePotentialStats(userExerciseHistory, exerciseDbData, statWeights) { // Renamed and statWeights passed in
+    const initialPotentialStats = TRACKED_STATS.reduce((acc, stat) => {
+        acc[stat] = null; // Initialize all potential stats to null
+        return acc;
+    }, {});
+
     if (!userExerciseHistory || userExerciseHistory.length === 0) {
-        console.log('No exercise history provided, returning base stats or zeros.');
-        // Return default or zero stats if no history
-        return {
-            upperBodyStrength: 1, lowerBodyStrength: 1, coreStrength: 1,
-            powerExplosiveness: 1, cardioEndurance: 1, flexibilityMobility: 1,
-            detailedContributions: {}
-        };
+        console.log('No exercise history provided, returning null potential stats.');
+        return { ...initialPotentialStats, detailedContributions: {} };
     }
 
-    const statWeights = await loadStatWeights();
+    // const statWeights = await loadStatWeights(); // Now passed as argument
 
-    // Create a map for quick lookup of exercise metadata
     const exerciseMetadataMap = new Map();
     for (const ex of exerciseDbData) {
         exerciseMetadataMap.set(ex.name.toLowerCase(), ex);
     }
 
-    // 1. Identify Strongest Lifts for each exercise type
+    // 1. Count relevant exercises for each stat & Identify Strongest Lifts
+    const relevantExerciseCounts = TRACKED_STATS.reduce((acc, stat) => {
+        acc[stat] = new Set(); // Use a Set to count unique exercise types relevant to the stat
+        return acc;
+    }, {});
     const strongestLifts = {}; // Store strongest lift for each exercise type (name)
 
     for (const loggedEx of userExerciseHistory) {
         if (!loggedEx.type || typeof loggedEx.weight !== 'number' || typeof loggedEx.reps !== 'number') {
-            // console.warn(`Skipping logged exercise due to missing type, weight, or reps: ${JSON.stringify(loggedEx)}`);
             continue;
         }
 
-        const oneRm = calculateOneRm(loggedEx.weight, loggedEx.reps);
         const exerciseNameLower = loggedEx.type.toLowerCase();
         const exerciseInfo = exerciseMetadataMap.get(exerciseNameLower);
 
         if (!exerciseInfo) {
-            // console.warn(`Exercise "${loggedEx.type}" not found in Exercise DB. Skipping.`);
             continue;
         }
 
-        // Filter by category - only include exercises suitable for 1RM calculation
+        // Count relevance for the 5-exercise rule
+        for (const statName of TRACKED_STATS) {
+            if (isExerciseRelevantForStat(exerciseInfo, statName, statWeights)) {
+                relevantExerciseCounts[statName].add(exerciseInfo.name); // Add exercise name (unique type)
+            }
+        }
+
+        // Filter by category for 1RM calculation (for potential stats)
         const RMCategories = ["strength", "powerlifting", "olympic weightlifting", "strongman"];
         if (!exerciseInfo.category || !RMCategories.includes(exerciseInfo.category.toLowerCase())) {
-            // console.log(`Skipping ${loggedEx.type} as its category '${exerciseInfo.category}' is not 1RM relevant.`);
             continue;
         }
 
+        const oneRm = calculateOneRm(loggedEx.weight, loggedEx.reps);
         if (!strongestLifts[exerciseInfo.name] || oneRm > strongestLifts[exerciseInfo.name].oneRm) {
             strongestLifts[exerciseInfo.name] = {
-                name: exerciseInfo.name, // Use the canonical name from DB
+                name: exerciseInfo.name,
                 oneRm: oneRm,
                 primaryMuscles: exerciseInfo.primaryMuscles || [],
                 secondaryMuscles: exerciseInfo.secondaryMuscles || [],
@@ -100,8 +140,6 @@ async function calculateUserStats(userExerciseHistory, exerciseDbData) {
                 mechanic: exerciseInfo.mechanic,
                 level: exerciseInfo.level, // This is difficulty
                 equipment: exerciseInfo.equipment,
-                // Store original logged exercise for reference if needed later
-                // loggedExercise: loggedEx
             };
         }
     }
@@ -109,68 +147,54 @@ async function calculateUserStats(userExerciseHistory, exerciseDbData) {
     const processedStrongestLifts = Object.values(strongestLifts);
 
     if (processedStrongestLifts.length === 0) {
-        console.log('No 1RM-relevant strongest lifts found after filtering.');
-         return {
-            upperBodyStrength: 1, lowerBodyStrength: 1, coreStrength: 1,
-            powerExplosiveness: 1, cardioEndurance: 1, flexibilityMobility: 1,
-            detailedContributions: {}
-        };
+        console.log('No 1RM-relevant strongest lifts found after filtering for potential calculation.');
+        return { ...initialPotentialStats, detailedContributions: {} };
     }
 
-    // Helper to ensure consistent stat key casing (camelCase)
-    const statKeyMap = {
-        "UpperBodyStrength": "upperBodyStrength",
-        "LowerBodyStrength": "lowerBodyStrength",
-        "CoreStrength": "coreStrength",
-        "PowerExplosiveness": "powerExplosiveness",
-        "CardioEndurance": "cardioEndurance",
-        "FlexibilityMobility": "flexibilityMobility",
-        "Vitality": "vitality" // Though we are currently ignoring vitality
-    };
-    const getStatKeyConsistent = (statName) => statKeyMap[statName] || statName;
+    // Helper to ensure consistent stat key casing (camelCase) - already camelCase in TRACKED_STATS
+    // Vitality removed from statKeyMap implicitly by using TRACKED_STATS
+    const getStatKeyConsistent = (statName) => TRACKED_STATS.includes(statName) ? statName : undefined;
+
 
     // Initialize rawStats and detailedContributions
-    const rawStats = {
-        upperBodyStrength: 0, lowerBodyStrength: 0, coreStrength: 0,
-        powerExplosiveness: 0, cardioEndurance: 0, flexibilityMobility: 0,
-        // vitality: 0 // if we decide to include it
-    };
+    const rawStats = TRACKED_STATS.reduce((acc, stat) => {
+        acc[stat] = 0;
+        return acc;
+    }, {});
     const detailedContributions = {};
 
     // 2. Build Weighted Stat Vectors for Strongest Lifts & 3. Apply Lift Value & Aggregate Raw Stats
     for (const lift of processedStrongestLifts) {
-        const liftStatContributions = {}; // Temporary vector for this lift's weights
+        const liftStatContributions = {};
 
-        // Primary Muscles (100% weight)
         for (const muscle of lift.primaryMuscles) {
             if (statWeights.muscles[muscle]) {
                 for (const [stat, weight] of Object.entries(statWeights.muscles[muscle])) {
                     const consistentStatKey = getStatKeyConsistent(stat);
-                    if (rawStats.hasOwnProperty(consistentStatKey)) { // Only consider stats we are tracking
+                    if (consistentStatKey && rawStats.hasOwnProperty(consistentStatKey)) {
                         liftStatContributions[consistentStatKey] = (liftStatContributions[consistentStatKey] || 0) + weight;
                     }
                 }
             }
         }
 
-        // Secondary Muscles (50% weight)
         for (const muscle of lift.secondaryMuscles) {
             if (statWeights.muscles[muscle]) {
                 for (const [stat, weight] of Object.entries(statWeights.muscles[muscle])) {
                     const consistentStatKey = getStatKeyConsistent(stat);
-                     if (rawStats.hasOwnProperty(consistentStatKey)) {
+                     if (consistentStatKey && rawStats.hasOwnProperty(consistentStatKey)) {
                         liftStatContributions[consistentStatKey] = (liftStatContributions[consistentStatKey] || 0) + (weight * 0.5);
                     }
                 }
             }
         }
 
-        // Force, Mechanic, Difficulty (Level), Equipment
         const otherCategories = ['force', 'mechanic', 'equipment'];
-        if (lift.level && statWeights.difficulty && statWeights.difficulty[lift.level.toLowerCase()]) { // level is difficulty
+        // Include difficulty (level) as per original potential calculation logic
+        if (lift.level && statWeights.difficulty && statWeights.difficulty[lift.level.toLowerCase()]) {
              for (const [stat, weight] of Object.entries(statWeights.difficulty[lift.level.toLowerCase()])) {
                 const consistentStatKey = getStatKeyConsistent(stat);
-                if (rawStats.hasOwnProperty(consistentStatKey)) {
+                if (consistentStatKey && rawStats.hasOwnProperty(consistentStatKey)) {
                     liftStatContributions[consistentStatKey] = (liftStatContributions[consistentStatKey] || 0) + weight;
                 }
             }
@@ -181,14 +205,13 @@ async function calculateUserStats(userExerciseHistory, exerciseDbData) {
             if (liftProperty && statWeights[category] && statWeights[category][liftProperty.toLowerCase()]) {
                 for (const [stat, weight] of Object.entries(statWeights[category][liftProperty.toLowerCase()])) {
                     const consistentStatKey = getStatKeyConsistent(stat);
-                    if (rawStats.hasOwnProperty(consistentStatKey)) {
+                    if (consistentStatKey && rawStats.hasOwnProperty(consistentStatKey)) {
                         liftStatContributions[consistentStatKey] = (liftStatContributions[consistentStatKey] || 0) + weight;
                     }
                 }
             }
         }
 
-        // Apply lift's 1RM to its stat contributions and aggregate into rawStats
         for (const [statName, contributionWeight] of Object.entries(liftStatContributions)) {
             if (rawStats.hasOwnProperty(statName)) {
                 const points = lift.oneRm * contributionWeight;
@@ -199,51 +222,186 @@ async function calculateUserStats(userExerciseHistory, exerciseDbData) {
                 }
                 detailedContributions[statName].push({
                     exerciseName: lift.name,
-                    pointsContribution: parseFloat(points.toFixed(2)) // Store with 2 decimal places
+                    pointsContribution: parseFloat(points.toFixed(2))
                 });
             }
         }
     }
 
-    // 4. Normalize and Apply Sigmoid
-    const finalStats = {};
-    for (const statName in rawStats) {
-        if (rawStats.hasOwnProperty(statName)) {
-            const currentRawStat = rawStats[statName];
-            const expectedCap = EXPECTED_STAT_CAPS[statName];
+    const finalPotentialStats = { ...initialPotentialStats };
 
-            let normalizedStat = 1; // Default to 1 if issues occur (e.g. cap is 0)
-            if (expectedCap && expectedCap > 0 && currentRawStat > 0) {
-                 // Calculate ratio, ensuring it doesn't exceed 1 (effectively capping raw stat at expected cap for this part)
-                const ratio = Math.min(1, currentRawStat / expectedCap);
-                normalizedStat = Math.round(ratio * STAT_CAP_RAW_MAX);
-            } else if (currentRawStat <= 0) {
-                normalizedStat = 1; // Minimum stat value
-            }
-            // Clamp between 1 and STAT_CAP_RAW_MAX (1000)
-            normalizedStat = Math.min(STAT_CAP_RAW_MAX, Math.max(1, normalizedStat));
-
-            finalStats[statName] = sigmoidScaled(normalizedStat, STAT_CAP_RAW_MAX);
+    for (const statName of TRACKED_STATS) {
+        // Apply 5-exercise rule
+        if (relevantExerciseCounts[statName].size < 5) {
+            finalPotentialStats[statName] = null; // Keep as null if not enough relevant exercises
+            if (detailedContributions[statName]) delete detailedContributions[statName]; // Remove contributions if stat is N/A
+            console.log(`Stat ${statName} has ${relevantExerciseCounts[statName].size} relevant exercises. Needs 5. Potential set to null.`);
+            continue;
         }
+
+        const currentRawStat = rawStats[statName];
+        const expectedCap = EXPECTED_STAT_CAPS[statName];
+
+        let normalizedStat = 1;
+        if (expectedCap && expectedCap > 0 && currentRawStat > 0) {
+            const ratio = Math.min(1, currentRawStat / expectedCap);
+            normalizedStat = Math.round(ratio * STAT_CAP_RAW_MAX);
+        } else if (currentRawStat <= 0) {
+            normalizedStat = 1;
+        }
+        normalizedStat = Math.min(STAT_CAP_RAW_MAX, Math.max(1, normalizedStat));
+        finalPotentialStats[statName] = sigmoidScaled(normalizedStat, STAT_CAP_RAW_MAX);
     }
 
-    console.log('Final stats calculated:', finalStats);
-    // console.log('Detailed contributions:', JSON.stringify(detailedContributions, null, 2));
+    console.log('Final potential stats calculated:', finalPotentialStats);
 
-    // 5. Prepare final output
     return {
-        ...finalStats, // Spread the calculated final stats
-        detailedContributions: detailedContributions
+        ...finalPotentialStats,
+        detailedContributions: detailedContributions,
+        // For XP calculation, it might be useful to also return strongestLifts by exercise type
+        // This can be used for the effortFactor calculation later.
+        strongestLiftsByExercise: strongestLifts
     };
 }
 
 module.exports = {
-    calculateUserStats,
-    sigmoidScaled, // Exporting for potential testing
-    calculateOneRm, // Exporting for potential testing
-    loadStatWeights, // Exporting for potential testing
-    // No, don't export loadExerciseDb directly from here if it's only used by the route
+    calculatePotentialStats, // Renamed
+    sigmoidScaled,
+    calculateOneRm,
+    loadStatWeights,
+    fetchExerciseDb
+    // XP functions will be added here
 };
+
+// --- XP and Progression Functions ---
+
+// Scaling function for XP needed for next stat increment
+function getXpToNext(currentStatValue) {
+    if (currentStatValue === null || currentStatValue < 0) return Infinity; // Should not happen if stat is active
+    const base = 30; // XP needed at low levels
+    const scale = 1.015; // How fast it ramps up
+    return Math.round(base * Math.pow(scale, currentStatValue));
+}
+
+// Calculate XP awarded for a single logged exercise
+function calculateXpForExercise(loggedExercise, exerciseMetadata, statWeights, strongestLiftsByExercise) {
+    const awardedXp = TRACKED_STATS.reduce((acc, stat) => {
+        acc[stat] = 0;
+        return acc;
+    }, {});
+
+    if (!loggedExercise || !exerciseMetadata || !statWeights) {
+        console.error("Missing required data for XP calculation.");
+        return awardedXp;
+    }
+
+    const baseXP = (loggedExercise.sets || 0) * 5;
+    if (baseXP === 0) return awardedXp;
+
+    let difficultyMultiplier = 1.0; // Default for beginner or if level undefined
+    if (exerciseMetadata.level) {
+        const levelLower = exerciseMetadata.level.toLowerCase();
+        if (levelLower === 'intermediate') difficultyMultiplier = 1.25;
+        else if (levelLower === 'expert' || levelLower === 'advanced') difficultyMultiplier = 1.5; // Assuming expert means advanced
+    }
+
+    let effortFactor = 0;
+    const exerciseCanonicalName = exerciseMetadata.name; // Use canonical name from DB
+    const userBest1RMForExercise = strongestLiftsByExercise?.[exerciseCanonicalName]?.oneRm;
+
+    let currentLift1RM = calculateOneRm(loggedExercise.weight, loggedExercise.reps);
+
+    if (userBest1RMForExercise && userBest1RMForExercise > 0) {
+        // Use the greater of the current lift's 1RM and the user's known best 1RM for this exercise type
+        // This ensures that if they lift less than their 1RM, the effort is scaled against their max potential.
+        // If they set a new PR, the effort is against that new PR (effectively 1.0 effort for the PR itself).
+        effortFactor = Math.min(1.0, currentLift1RM / userBest1RMForExercise);
+    } else if (currentLift1RM > 0) {
+        // First time doing this exercise, or no historical 1RM, effort is against current lift's 1RM.
+        effortFactor = 1.0; // Max effort for a new PR or first attempt
+    }
+
+    if (loggedExercise.weight === 0 && currentLift1RM === 0) { // For bodyweight exercises with no direct 1RM equivalent
+        effortFactor = 0.5; // Default effort factor for bodyweight non-rep-maxed exercises, can be adjusted
+    }
+
+
+    const coreXpValue = baseXP * difficultyMultiplier * effortFactor;
+    if (coreXpValue === 0) return awardedXp;
+
+    for (const statName of TRACKED_STATS) {
+        let totalStatXp = 0;
+        let contributingWeight = 0;
+
+        // Primary Muscles
+        for (const muscle of exerciseMetadata.primaryMuscles || []) {
+            contributingWeight = statWeights.muscles?.[muscle]?.[statName] || 0;
+            totalStatXp += coreXpValue * contributingWeight;
+        }
+        // Secondary Muscles (0.5x weight)
+        for (const muscle of exerciseMetadata.secondaryMuscles || []) {
+            contributingWeight = statWeights.muscles?.[muscle]?.[statName] || 0;
+            totalStatXp += coreXpValue * (contributingWeight * 0.5);
+        }
+        // Force
+        if (exerciseMetadata.force) {
+            contributingWeight = statWeights.force?.[exerciseMetadata.force.toLowerCase()]?.[statName] || 0;
+            totalStatXp += coreXpValue * contributingWeight;
+        }
+        // Mechanic
+        if (exerciseMetadata.mechanic) {
+            contributingWeight = statWeights.mechanic?.[exerciseMetadata.mechanic.toLowerCase()]?.[statName] || 0;
+            totalStatXp += coreXpValue * contributingWeight;
+        }
+        // Equipment
+        if (exerciseMetadata.equipment) {
+            contributingWeight = statWeights.equipment?.[exerciseMetadata.equipment.toLowerCase()]?.[statName] || 0;
+            totalStatXp += coreXpValue * contributingWeight;
+        }
+        // IMPORTANT: Difficulty from stat_weights.json is NOT used here, as per plan.
+
+        if (totalStatXp > 0) {
+            awardedXp[statName] = Math.round(totalStatXp * 100) / 100; // Round to 2 decimal places
+        }
+    }
+    return awardedXp;
+}
+
+// Apply awarded XP to user's stats and handle leveling up
+function applyXpAndLevelUp(currentUserStats, awardedXpMap) {
+    const updatedStats = JSON.parse(JSON.stringify(currentUserStats)); // Deep copy
+
+    for (const statName of TRACKED_STATS) {
+        const xpGained = awardedXpMap[statName] || 0;
+        if (xpGained === 0) continue;
+
+        const stat = updatedStats[statName];
+        // Stat must have a potential value to gain XP and level up
+        if (stat.potential === null || stat.current === null) {
+            console.log(`Stat ${statName} has no potential or current value, XP not applied.`);
+            continue;
+        }
+
+        stat.xp += xpGained;
+
+        while (stat.xp >= stat.xpToNext && stat.current < 1000) {
+            stat.current += 1;
+            stat.xp -= stat.xpToNext;
+            stat.xpToNext = getXpToNext(stat.current);
+
+            if (stat.current >= 1000) { // Reached global cap
+                stat.current = 1000;
+                stat.xp = 0; // Optional: clear XP or set to amount over last level
+                stat.xpToNext = getXpToNext(1000); // Or Infinity, or some large number
+                break;
+            }
+        }
+         // Ensure XP doesn't go negative if somehow xpToNext was larger than xp
+        if (stat.xp < 0) stat.xp = 0;
+    }
+    return updatedStats;
+}
+
 
 // Helper function to fetch the exercise DB data (similar to frontend)
 // This could be in a more generic helper/utils file if used elsewhere in backend
@@ -267,9 +425,12 @@ async function fetchExerciseDb() {
 }
 
 module.exports = {
-    calculateUserStats,
+    calculatePotentialStats,
     sigmoidScaled,
     calculateOneRm,
-    loadStatWeights, // if needed by routes directly, though likely not
-    fetchExerciseDb // Exporting this for the route to use
+    loadStatWeights,
+    fetchExerciseDb,
+    getXpToNext,
+    calculateXpForExercise,
+    applyXpAndLevelUp
 };
