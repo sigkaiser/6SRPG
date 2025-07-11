@@ -455,5 +455,6 @@ module.exports = {
     fetchExerciseDb,
     getXpToNext,
     calculateXpForExercise,
-    applyXpAndLevelUp
+    applyXpAndLevelUp,
+    TRACKED_STATS // Exporting TRACKED_STATS
 };
