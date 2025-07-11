@@ -184,9 +184,11 @@ router.post('/:id/exercises', async (req, res) => {
     }
 
     user.markModified('stats');
+    user.markModified('exerciseHistory'); // Ensure exerciseHistory changes are saved
     await user.save();
     // --- End Stat and XP Processing ---
 
+    console.log('Updated user.exerciseHistory on backend:', user.exerciseHistory); // Log history before sending
     // Return the full updated user object
     res.status(200).json({ message: 'Exercise logged and stats updated successfully', user: user.toJSON() });
 
