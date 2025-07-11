@@ -205,7 +205,7 @@ async function calculatePotentialStats(userExerciseHistory, exerciseDbData, stat
                 for (const [pascalCaseStat, weight] of Object.entries(statWeights.muscles[muscle])) {
                     const camelCaseStatKey = STAT_KEY_MAP_PASCAL_TO_CAMEL[pascalCaseStat];
                     if (camelCaseStatKey && TRACKED_STATS.includes(camelCaseStatKey)) {
-                        liftStatContributions[camelCaseStatKey] = (liftStatributions[camelCaseStatKey] || 0) + (weight * 0.5);
+                        liftStatContributions[camelCaseStatKey] = (liftStatContributions[camelCaseStatKey] || 0) + (weight * 0.5);
                     }
                 }
             }
