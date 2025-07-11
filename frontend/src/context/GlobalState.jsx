@@ -28,7 +28,6 @@ const RECALCULATE_STATS_FAIL = 'RECALCULATE_STATS_FAIL'; // Added
 function globalReducer(state, action) {
   switch (action.type) {
     case LOGIN_SUCCESS:
-      console.log('Updating global state with exercise history:', action.payload.exerciseHistory);
       // Reset detailed contributions on new login
       return { ...state, currentUser: action.payload, currentUserDetailedContributions: null, error: null };
     case LOGOUT:

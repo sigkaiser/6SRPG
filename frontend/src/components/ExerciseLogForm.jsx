@@ -23,30 +23,13 @@ const ExerciseLogForm = ({ onLogSuccess }) => {
     }
     try {
       const response = await apiLogExercise(currentUser.id, { type: selectedExercise, sets: numSets, reps: numReps, weight: numWeight });
-
-      if (response.success) {
-        setMessage(response.message || 'Exercise logged!'); // Show success message
-
-        if (response.user) {
-          console.log('Exercise history received from backend:', response.user.exerciseHistory);
-          loginUser(response.user); // Update global state with the full user object
-          setSelectedExercise(''); setSets(''); setReps(''); setWeight('');
-          if (onLogSuccess) onLogSuccess();
-        } else {
-          // Successful API call but no user object returned - this is unexpected
-          setError('Exercise logged, but vital user data was not received. Please try refreshing the page.');
-          // Still clear the form as the log itself was successful server-side
-          setSelectedExercise(''); setSets(''); setReps(''); setWeight('');
-          if (onLogSuccess) onLogSuccess();
-        }
-      } else {
-        // response.success is false
-        setError(response.message || 'Failed to log exercise.');
-      }
-    } catch (err) {
-      // Catch network errors or other issues with the apiLogExercise call itself
-      setError(err.message || 'Error logging exercise.');
-    }
+      if (response.success && response.user) { // Expect response.user
+        setMessage(response.message || 'Exercise logged!');
+        loginUser(response.user); // Update global state with the full user object from backend
+        setSelectedExercise(''); setSets(''); setReps(''); setWeight('');
+        if (onLogSuccess) onLogSuccess();
+      } else { setError(response.message || 'Failed to log exercise.'); }
+    } catch (err) { setError(err.message || 'Error logging exercise.'); }
   };
 
   return (
