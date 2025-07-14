@@ -104,8 +104,6 @@ function isExerciseRelevantForStat(exerciseInfo, camelCaseStatName, statWeights)
 
 // Main function to calculate POTENTIAL stats
 async function calculatePotentialStats(userExerciseHistory, exerciseDbData, statWeights) { // Renamed and statWeights passed in
-    console.log('--- calculatePotentialStats ---');
-    console.log('userExerciseHistory count:', userExerciseHistory.length);
     const initialPotentialStats = TRACKED_STATS.reduce((acc, stat) => {
         acc[stat] = null; // Initialize all potential stats to null
         return acc;
@@ -156,9 +154,8 @@ async function calculatePotentialStats(userExerciseHistory, exerciseDbData, stat
         }
 
         const oneRm = calculateOneRm(loggedEx.weight, loggedEx.reps);
-        const exerciseNameLower = exerciseInfo.name.toLowerCase();
-        if (!strongestLifts[exerciseNameLower] || oneRm > strongestLifts[exerciseNameLower].oneRm) {
-            strongestLifts[exerciseNameLower] = {
+        if (!strongestLifts[exerciseInfo.name] || oneRm > strongestLifts[exerciseInfo.name].oneRm) {
+            strongestLifts[exerciseInfo.name] = {
                 name: exerciseInfo.name,
                 oneRm: oneRm,
                 primaryMuscles: exerciseInfo.primaryMuscles || [],
@@ -290,6 +287,15 @@ async function calculatePotentialStats(userExerciseHistory, exerciseDbData, stat
     };
 }
 
+module.exports = {
+    calculatePotentialStats, // Renamed
+    sigmoidScaled,
+    calculateOneRm,
+    loadStatWeights,
+    fetchExerciseDb
+    // XP functions will be added here
+};
+
 // --- XP and Progression Functions ---
 
 // Scaling function for XP needed for next stat increment
@@ -302,10 +308,6 @@ function getXpToNext(currentStatValue) {
 
 // Calculate XP awarded for a single logged exercise
 function calculateXpForExercise(loggedExercise, exerciseMetadata, statWeights, strongestLiftsByExercise) {
-    console.log('--- calculateXpForExercise ---');
-    console.log('loggedExercise:', loggedExercise);
-    console.log('exerciseMetadata:', exerciseMetadata);
-    console.log('strongestLiftsByExercise:', strongestLiftsByExercise);
     const awardedXp = TRACKED_STATS.reduce((acc, stat) => {
         acc[stat] = 0;
         return acc;
@@ -327,7 +329,7 @@ function calculateXpForExercise(loggedExercise, exerciseMetadata, statWeights, s
     }
 
     let effortFactor = 0;
-    const exerciseCanonicalName = exerciseMetadata.name.toLowerCase(); // Use canonical name from DB, lowercased
+    const exerciseCanonicalName = exerciseMetadata.name; // Use canonical name from DB
     const userBest1RMForExercise = strongestLiftsByExercise?.[exerciseCanonicalName]?.oneRm;
 
     let currentLift1RM = calculateOneRm(loggedExercise.weight, loggedExercise.reps);
@@ -390,9 +392,6 @@ function calculateXpForExercise(loggedExercise, exerciseMetadata, statWeights, s
 
 // Apply awarded XP to user's stats and handle leveling up
 function applyXpAndLevelUp(currentUserStats, awardedXpMap) {
-    console.log('--- applyXpAndLevelUp ---');
-    console.log('currentUserStats:', currentUserStats);
-    console.log('awardedXpMap:', awardedXpMap);
     const updatedStats = JSON.parse(JSON.stringify(currentUserStats)); // Deep copy
 
     for (const statName of TRACKED_STATS) {
@@ -400,7 +399,6 @@ function applyXpAndLevelUp(currentUserStats, awardedXpMap) {
         if (xpGained === 0) continue;
 
         const stat = updatedStats[statName];
-        console.log(`Processing stat: ${statName}, XP Gained: ${xpGained}`);
         // Stat must have a potential value to gain XP and level up
         if (stat.potential === null || stat.current === null) {
             console.log(`Stat ${statName} has no potential or current value, XP not applied.`);
@@ -458,5 +456,5 @@ module.exports = {
     getXpToNext,
     calculateXpForExercise,
     applyXpAndLevelUp,
-    TRACKED_STATS
+    TRACKED_STATS // Exporting TRACKED_STATS
 };
