@@ -69,8 +69,8 @@ export const logExercise = async (userId, exerciseData) => {
   }
 };
 
-export const fetchUserExerciseHistory = async (userId) => {
-  console.log(`Fetching exercise history for user ${userId}...`);
+export const getUser = async (userId) => {
+  console.log(`Fetching user data for user ${userId}...`);
   try {
     const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
       method: 'GET',
