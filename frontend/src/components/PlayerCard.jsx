@@ -61,10 +61,10 @@ const PlayerCard = () => {
   useEffect(() => {
     // Recalculate stats if user is loaded and detailed contributions aren't, or if exercise history changes.
     // A more sophisticated check might involve timestamps or specific user actions.
-    if (currentUser && currentUser.id && !currentUserDetailedContributions && !isLoadingStats) {
+    if (currentUser && currentUser.id && !isLoadingStats) {
       recalculateStats(currentUser.id);
     }
-  }, [currentUser, currentUserDetailedContributions, recalculateStats, isLoadingStats]);
+  }, [currentUser, recalculateStats, isLoadingStats]);
 
   if (!currentUser) return <p className="text-center text-gray-400">Please login to view your Player Card.</p>;
 
