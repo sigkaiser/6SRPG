@@ -3,7 +3,7 @@ import { useGlobalState } from '../context/GlobalState';
 import { logExercise as apiLogExercise } from '../services/api';
 
 const ExerciseLogForm = ({ onLogSuccess }) => {
-  const { currentUser, exercises, setError, clearError, refetchUser } = useGlobalState();
+  const { currentUser, exercises, setError, clearError, loginUser } = useGlobalState();
   const [selectedExercise, setSelectedExercise] = useState('');
   const [sets, setSets] = useState('');
   const [reps, setReps] = useState('');
@@ -25,7 +25,8 @@ const ExerciseLogForm = ({ onLogSuccess }) => {
       const response = await apiLogExercise(currentUser.id, { type: selectedExercise, sets: numSets, reps: numReps, weight: numWeight });
       if (response.success && response.exercise) {
         setMessage(response.message || 'Exercise logged!');
-        await refetchUser(currentUser.id); // Refetch user data
+        const updatedUser = { ...currentUser, exerciseHistory: [...(currentUser.exerciseHistory || []), response.exercise] };
+        loginUser(updatedUser); // Update global state
         setSelectedExercise(''); setSets(''); setReps(''); setWeight('');
         if (onLogSuccess) onLogSuccess();
       } else { setError(response.message || 'Failed to log exercise.'); }

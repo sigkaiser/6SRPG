@@ -1,10 +1,7 @@
 import React, { createContext, useReducer, useContext, useEffect, useCallback } from 'react';
 
 // Initial state
-import {
-  recalculateUserStats as apiRecalculateUserStats,
-  getUser as apiGetUser
-} from '../services/api';
+import { recalculateUserStats as apiRecalculateUserStats } from '../services/api'; // Added import
 
 const initialState = {
   currentUser: null,
@@ -134,24 +131,6 @@ export const GlobalStateProvider = ({ children }) => {
     dispatch({ type: CLEAR_ERROR });
   }, []);
 
-  const refetchUser = useCallback(async (userId) => {
-    if (!userId) {
-      console.error("refetchUser: userId is undefined.");
-      return;
-    }
-    try {
-      const result = await apiGetUser(userId);
-      if (result.success && result.user) {
-        dispatch({ type: LOGIN_SUCCESS, payload: result.user });
-      } else {
-        // Optionally handle the error, e.g., by setting an error state
-        console.error("refetchUser failed:", result.message);
-      }
-    } catch (error) {
-      console.error('Error refetching user in GlobalState:', error);
-    }
-  }, []);
-
   // Load exercises on initial mount
   useEffect(() => {
     // Check if exercises are already loaded or if loading is in progress
@@ -179,7 +158,6 @@ export const GlobalStateProvider = ({ children }) => {
         recalculateStats,
         setError,
         clearError,
-        refetchUser,
       }}
     >
       {children}
