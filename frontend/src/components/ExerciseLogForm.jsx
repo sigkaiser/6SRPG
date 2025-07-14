@@ -23,9 +23,10 @@ const ExerciseLogForm = ({ onLogSuccess }) => {
     }
     try {
       const response = await apiLogExercise(currentUser.id, { type: selectedExercise, sets: numSets, reps: numReps, weight: numWeight });
-      if (response.success && response.user) {
+      if (response.success && response.exercise) {
         setMessage(response.message || 'Exercise logged!');
-        loginUser(response.user); // Update global state with the updated user object
+        const updatedUser = { ...currentUser, exerciseHistory: [...(currentUser.exerciseHistory || []), response.exercise] };
+        loginUser(updatedUser); // Update global state
         setSelectedExercise(''); setSets(''); setReps(''); setWeight('');
         if (onLogSuccess) onLogSuccess();
       } else { setError(response.message || 'Failed to log exercise.'); }
