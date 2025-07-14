@@ -62,15 +62,19 @@ const { TRACKED_STATS } = require('../services/statCalculationService'); // Impo
 
 // POST /api/users/:id/exercises - (Updated to include stat and XP processing)
 router.post('/:id/exercises', async (req, res) => {
+  console.log('Received request to log exercise for user:', req.params.id);
+  console.log('Request body:', req.body);
   try {
     const user = await User.findById(req.params.id);
     if (!user) {
+      console.error('User not found');
       return res.status(404).json({ error: 'User not found' });
     }
 
     const { type, sets, reps, weight, date } = req.body;
 
     if (!type || sets === undefined || reps === undefined || weight === undefined) {
+      console.error('Missing required exercise fields');
       return res.status(400).json({ error: 'Missing required exercise fields: type, sets, reps, weight' });
     }
 
@@ -97,8 +101,11 @@ router.post('/:id/exercises', async (req, res) => {
     }
 
     // 1. Calculate Potential Stats (and get strongest lifts)
+    console.log('Calculating potential stats...');
     const potentialResults = await statCalculationService.calculatePotentialStats(user.exerciseHistory, exerciseDbData, statWeights);
     const { strongestLiftsByExercise, detailedContributions, ...newPotentials } = potentialResults;
+    console.log('Potential stats calculated:', newPotentials);
+    console.log('Strongest lifts by exercise:', strongestLiftsByExercise);
 
     // Initialize user.stats if it's not already there (should be by schema defaults, but good practice)
     if (!user.stats) {
@@ -134,22 +141,27 @@ router.post('/:id/exercises', async (req, res) => {
     }
 
     // 3. Calculate XP for the logged exercise
+    console.log('Calculating XP for exercise...');
     const exerciseMetadata = exerciseDbData.find(ex => ex.name.toLowerCase() === loggedExercise.type.toLowerCase());
     let awardedXpMap = {};
     if (exerciseMetadata) {
         awardedXpMap = statCalculationService.calculateXpForExercise(loggedExercise, exerciseMetadata, statWeights, strongestLiftsByExercise);
+        console.log('Awarded XP map:', awardedXpMap);
     } else {
         console.warn(`Metadata for exercise type "${loggedExercise.type}" not found. XP cannot be calculated for this exercise.`);
         // awardedXpMap will remain all zeros
     }
 
     // 4. Apply XP and Handle Level Ups
+    console.log('Applying XP and handling level ups...');
     if (Object.keys(awardedXpMap).length > 0) {
         user.stats = statCalculationService.applyXpAndLevelUp(user.stats, awardedXpMap);
+        console.log('User stats after applying XP:', user.stats);
     }
 
     user.markModified('stats');
     await user.save();
+    console.log('User stats saved to database.');
     // --- End Stat and XP Processing ---
 
     res.status(200).json(user.exerciseHistory[user.exerciseHistory.length - 1]);
