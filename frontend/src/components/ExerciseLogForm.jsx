@@ -15,14 +15,17 @@ const ExerciseLogForm = ({ onLogSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault(); clearError(); setMessage('');
+    console.log('[XP LOG] Exercise log form submitted.');
     if (!selectedExercise) { setError("Please select an exercise."); return; }
     if (sets === '' || reps === '' || weight === '') { setError("All fields (sets, reps, weight) are required."); return; }
     const numSets = parseInt(sets), numReps = parseInt(reps), numWeight = parseFloat(weight);
     if (isNaN(numSets) || numSets <= 0 || isNaN(numReps) || numReps <= 0 || isNaN(numWeight) || numWeight < 0) {
       setError("Enter valid numbers: sets/reps > 0, weight >= 0."); return;
     }
+    const exerciseData = { type: selectedExercise, sets: numSets, reps: numReps, weight: numWeight };
+    console.log('[XP LOG] Exercise data to be logged:', exerciseData);
     try {
-      const response = await apiLogExercise(currentUser.id, { type: selectedExercise, sets: numSets, reps: numReps, weight: numWeight });
+      const response = await apiLogExercise(currentUser.id, exerciseData);
       if (response.success && response.exercise) {
         setMessage(response.message || 'Exercise logged!');
         const updatedUser = { ...currentUser, exerciseHistory: [...(currentUser.exerciseHistory || []), response.exercise] };

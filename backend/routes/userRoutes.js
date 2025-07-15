@@ -26,41 +26,6 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// POST /api/users/:id/exercises
-router.post('/:id/exercises', async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    const { type, sets, reps, weight, date } = req.body;
-
-    // Validate required fields
-    if (!type || sets === undefined || reps === undefined || weight === undefined) {
-      return res.status(400).json({ error: 'Missing required exercise fields: type, sets, reps, weight' });
-    }
-
-    const newExercise = {
-      type, // This corresponds to exerciseName from the frontend
-      sets,
-      reps,
-      weight,
-      date: date ? new Date(date) : Date.now(),
-    };
-
-    user.exerciseHistory.push(newExercise);
-    await user.save();
-
-    // Return the newly added exercise
-    // The exercise is the last one in the array after push
-    res.status(200).json(user.exerciseHistory[user.exerciseHistory.length - 1]);
-  } catch (err) {
-    console.error('Error adding exercise:', err);
-    res.status(500).json({ error: 'Failed to add exercise' });
-  }
-});
-
 // POST /api/users/login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
@@ -97,15 +62,19 @@ const { TRACKED_STATS } = require('../services/statCalculationService'); // Impo
 
 // POST /api/users/:id/exercises - (Updated to include stat and XP processing)
 router.post('/:id/exercises', async (req, res) => {
+  console.log(`[XP LOG] Received request to log exercise for user ID: ${req.params.id}`);
+  console.log(`[XP LOG] Request body:`, req.body);
   try {
     const user = await User.findById(req.params.id);
     if (!user) {
+      console.error(`[XP LOG] User not found for ID: ${req.params.id}`);
       return res.status(404).json({ error: 'User not found' });
     }
 
     const { type, sets, reps, weight, date } = req.body;
 
     if (!type || sets === undefined || reps === undefined || weight === undefined) {
+      console.error('[XP LOG] Missing required exercise fields.');
       return res.status(400).json({ error: 'Missing required exercise fields: type, sets, reps, weight' });
     }
 
@@ -121,22 +90,28 @@ router.post('/:id/exercises', async (req, res) => {
     // Don't save yet, will save after stat updates
 
     // --- Begin Stat and XP Processing ---
+    console.log('[XP LOG] Starting stat and XP processing.');
     const exerciseDbData = await statCalculationService.fetchExerciseDb();
     if (!exerciseDbData || exerciseDbData.length === 0) {
+        console.error('[XP LOG] Exercise database is unavailable or empty.');
         return res.status(503).json({ error: 'Exercise database is currently unavailable or empty. Exercise logged but stats not updated.' });
     }
 
     const statWeights = await statCalculationService.loadStatWeights();
     if (!statWeights) {
+        console.error('[XP LOG] Stat weights configuration is unavailable.');
         return res.status(503).json({ error: 'Stat weights configuration is currently unavailable. Exercise logged but stats not updated.' });
     }
 
     // 1. Calculate Potential Stats (and get strongest lifts)
+    console.log('[XP LOG] Calculating potential stats.');
     const potentialResults = await statCalculationService.calculatePotentialStats(user.exerciseHistory, exerciseDbData, statWeights);
     const { strongestLiftsByExercise, detailedContributions, ...newPotentials } = potentialResults;
+    console.log('[XP LOG] Potential stats calculated:', newPotentials);
 
     // Initialize user.stats if it's not already there (should be by schema defaults, but good practice)
     if (!user.stats) {
+        console.log('[XP LOG] Initializing user.stats object.');
         user.stats = {}; // This should align with new schema structure
     }
     TRACKED_STATS.forEach(statName => {
@@ -169,18 +144,22 @@ router.post('/:id/exercises', async (req, res) => {
     }
 
     // 3. Calculate XP for the logged exercise
+    console.log('[XP LOG] Calculating XP for the logged exercise.');
     const exerciseMetadata = exerciseDbData.find(ex => ex.name.toLowerCase() === loggedExercise.type.toLowerCase());
     let awardedXpMap = {};
     if (exerciseMetadata) {
         awardedXpMap = statCalculationService.calculateXpForExercise(loggedExercise, exerciseMetadata, statWeights, strongestLiftsByExercise);
+        console.log('[XP LOG] XP calculated:', awardedXpMap);
     } else {
-        console.warn(`Metadata for exercise type "${loggedExercise.type}" not found. XP cannot be calculated for this exercise.`);
+        console.warn(`[XP LOG] Metadata for exercise type "${loggedExercise.type}" not found. XP cannot be calculated for this exercise.`);
         // awardedXpMap will remain all zeros
     }
 
     // 4. Apply XP and Handle Level Ups
     if (Object.keys(awardedXpMap).length > 0) {
+        console.log('[XP LOG] Applying XP and handling level ups.');
         user.stats = statCalculationService.applyXpAndLevelUp(user.stats, awardedXpMap);
+        console.log('[XP LOG] User stats after applying XP:', user.stats);
     }
 
     user.markModified('stats');

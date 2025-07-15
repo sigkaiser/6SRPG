@@ -308,17 +308,23 @@ function getXpToNext(currentStatValue) {
 
 // Calculate XP awarded for a single logged exercise
 function calculateXpForExercise(loggedExercise, exerciseMetadata, statWeights, strongestLiftsByExercise) {
+    console.log('[XP LOG] Entering calculateXpForExercise function.');
+    console.log('[XP LOG] Logged Exercise:', loggedExercise);
+    console.log('[XP LOG] Exercise Metadata:', exerciseMetadata);
+    console.log('[XP LOG] Strongest Lifts by Exercise:', strongestLiftsByExercise);
+
     const awardedXp = TRACKED_STATS.reduce((acc, stat) => {
         acc[stat] = 0;
         return acc;
     }, {});
 
     if (!loggedExercise || !exerciseMetadata || !statWeights) {
-        console.error("Missing required data for XP calculation.");
+        console.error("[XP LOG] Missing required data for XP calculation.");
         return awardedXp;
     }
 
     const baseXP = (loggedExercise.sets || 0) * 5;
+    console.log(`[XP LOG] Base XP: ${baseXP}`);
     if (baseXP === 0) return awardedXp;
 
     let difficultyMultiplier = 1.0; // Default for beginner or if level undefined
@@ -327,12 +333,15 @@ function calculateXpForExercise(loggedExercise, exerciseMetadata, statWeights, s
         if (levelLower === 'intermediate') difficultyMultiplier = 1.25;
         else if (levelLower === 'expert' || levelLower === 'advanced') difficultyMultiplier = 1.5; // Assuming expert means advanced
     }
+    console.log(`[XP LOG] Difficulty Multiplier: ${difficultyMultiplier}`);
 
     let effortFactor = 0;
     const exerciseCanonicalName = exerciseMetadata.name; // Use canonical name from DB
     const userBest1RMForExercise = strongestLiftsByExercise?.[exerciseCanonicalName]?.oneRm;
+    console.log(`[XP LOG] User's Best 1RM for ${exerciseCanonicalName}: ${userBest1RMForExercise}`);
 
     let currentLift1RM = calculateOneRm(loggedExercise.weight, loggedExercise.reps);
+    console.log(`[XP LOG] Current Lift's 1RM: ${currentLift1RM}`);
 
     if (userBest1RMForExercise && userBest1RMForExercise > 0) {
         // Use the greater of the current lift's 1RM and the user's known best 1RM for this exercise type
@@ -347,9 +356,11 @@ function calculateXpForExercise(loggedExercise, exerciseMetadata, statWeights, s
     if (loggedExercise.weight === 0 && currentLift1RM === 0) { // For bodyweight exercises with no direct 1RM equivalent
         effortFactor = 0.5; // Default effort factor for bodyweight non-rep-maxed exercises, can be adjusted
     }
+    console.log(`[XP LOG] Effort Factor: ${effortFactor}`);
 
 
     const coreXpValue = baseXP * difficultyMultiplier * effortFactor;
+    console.log(`[XP LOG] Core XP Value: ${coreXpValue}`);
     if (coreXpValue === 0) return awardedXp;
 
     for (const statName of TRACKED_STATS) {
@@ -392,6 +403,10 @@ function calculateXpForExercise(loggedExercise, exerciseMetadata, statWeights, s
 
 // Apply awarded XP to user's stats and handle leveling up
 function applyXpAndLevelUp(currentUserStats, awardedXpMap) {
+    console.log('[XP LOG] Entering applyXpAndLevelUp function.');
+    console.log('[XP LOG] Current User Stats:', currentUserStats);
+    console.log('[XP LOG] Awarded XP Map:', awardedXpMap);
+
     const updatedStats = JSON.parse(JSON.stringify(currentUserStats)); // Deep copy
 
     for (const statName of TRACKED_STATS) {
@@ -401,7 +416,7 @@ function applyXpAndLevelUp(currentUserStats, awardedXpMap) {
         const stat = updatedStats[statName];
         // Stat must have a potential value to gain XP and level up
         if (stat.potential === null || stat.current === null) {
-            console.log(`Stat ${statName} has no potential or current value, XP not applied.`);
+            console.log(`[XP LOG] Stat ${statName} has no potential or current value, XP not applied.`);
             continue;
         }
 
