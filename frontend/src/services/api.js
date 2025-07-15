@@ -45,7 +45,7 @@ export const loginUser = async (credentials) => {
 };
 
 export const logExercise = async (userId, exerciseData) => {
-  console.log(`User ${userId} attempting to log exercise:`, exerciseData);
+  console.log(`[XP LOG] Calling logExercise API for user ${userId} with data:`, exerciseData);
   try {
     const response = await fetch(`${API_BASE_URL}/api/users/${userId}/exercises`, {
       method: 'POST',
@@ -56,7 +56,9 @@ export const logExercise = async (userId, exerciseData) => {
       body: JSON.stringify({ ...exerciseData, date: exerciseData.date || new Date().toISOString() }),
     });
     const data = await response.json();
+    console.log('[XP LOG] API response received:', data);
     if (!response.ok) {
+      console.error('[XP LOG] API response not OK:', response);
       return { success: false, message: data.message || 'Failed to log exercise.' };
     }
     // Assuming backend returns { message: '...', exercise: {...} }
@@ -64,7 +66,7 @@ export const logExercise = async (userId, exerciseData) => {
     // Backend returns just the exercise object as data.
     return { success: true, message: data.message || "Exercise logged!", exercise: data };
   } catch (error) {
-    console.error('Log Exercise API error:', error);
+    console.error('[XP LOG] Log Exercise API error:', error);
     return { success: false, message: error.message || 'A network error occurred while logging exercise.' };
   }
 };
