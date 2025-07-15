@@ -413,24 +413,15 @@ function applyXpAndLevelUp(currentUserStats, awardedXpMap) {
 }
 
 
-// Helper function to fetch the exercise DB data (similar to frontend)
-// This could be in a more generic helper/utils file if used elsewhere in backend
+// Helper function to fetch the exercise DB data
 async function fetchExerciseDb() {
-    // In a production app, this URL might be a config value,
-    // and the data might be cached or periodically updated in our own DB/storage.
-    const EXERCISE_DB_URL = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
+    const exercisesPath = path.join(__dirname, '../data/exercises.json');
     try {
-        const response = await fetch(EXERCISE_DB_URL);
-        if (!response.ok) {
-            throw new Error(`HTTP error fetching exercise DB! status: ${response.status}`);
-        }
-        const data = await response.json();
-        return data;
+        const data = await fs.readFile(exercisesPath, 'utf8');
+        return JSON.parse(data);
     } catch (error) {
-        console.error('Error fetching Exercise DB:', error);
-        // Depending on how critical this is, you might want to throw or return null/empty array
-        // and let the caller handle it. For stat calculation, it's critical.
-        throw new Error('Could not fetch exercise database.');
+        console.error('Error loading exercises.json:', error);
+        throw new Error('Could not load exercise database.');
     }
 }
 
