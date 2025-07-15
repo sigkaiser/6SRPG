@@ -71,20 +71,33 @@ router.post('/:id/exercises', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const { type, sets, reps, weight, date } = req.body;
+    const { type, category, sets, duration, date } = req.body;
 
-    if (!type || sets === undefined || reps === undefined || weight === undefined) {
-      console.error('[XP LOG] Missing required exercise fields.');
-      return res.status(400).json({ error: 'Missing required exercise fields: type, sets, reps, weight' });
+    if (!type || !category) {
+      return res.status(400).json({ error: 'Missing required fields: type, category' });
     }
 
     const loggedExercise = {
       type,
-      sets,
-      reps,
-      weight,
-      date: date ? new Date(date) : Date.now(),
+      category,
+      date: date ? new Date(date) : new Date(),
     };
+
+    if (category === 'Lift' || category === 'Stretch') {
+      if (!Array.isArray(sets) || sets.length === 0) {
+        return res.status(400).json({ error: 'Sets are required for Lift and Stretch exercises.' });
+      }
+      loggedExercise.sets = sets;
+    } else if (category === 'Cardio') {
+      if (duration === undefined) {
+        return res.status(400).json({ error: 'Duration is required for Cardio exercises.' });
+      }
+      loggedExercise.duration = duration;
+      // In the future, METs will be added to exercises.json and used here
+      loggedExercise.intensity = 7; // Placeholder
+    } else {
+      return res.status(400).json({ error: 'Invalid exercise category.' });
+    }
 
     user.exerciseHistory.push(loggedExercise);
     // Don't save yet, will save after stat updates
