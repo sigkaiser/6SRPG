@@ -10,8 +10,6 @@ const EXPECTED_STAT_CAPS = {
     lowerBodyStrength: 3000,
     coreStrength: 1500,
     powerExplosiveness: 1800,
-    cardioEndurance: 1000, // Assuming this is a target raw score like others
-    flexibilityMobility: 800,  // Assuming this is a target raw score like others
     // Vitality removed
 };
 
@@ -226,6 +224,10 @@ async function calculatePotentialStats(userExerciseHistory, exerciseDbData, stat
     const finalPotentialStats = { ...initialPotentialStats };
 
     for (const statName of TRACKED_STATS) {
+        if (statName === 'cardioEndurance' || statName === 'flexibilityMobility') {
+            finalPotentialStats[statName] = 1000;
+            continue;
+        }
         // Apply 5-exercise rule
         if (relevantExerciseCounts[statName].size < 5) {
             finalPotentialStats[statName] = null; // Keep as null if not enough relevant exercises
@@ -280,97 +282,85 @@ function getXpToNext(currentStatValue) {
 
 // Calculate XP awarded for a single logged exercise
 function calculateXpForExercise(loggedExercise, exerciseMetadata, statWeights, strongestLiftsByExercise) {
-    console.log('[XP LOG] Entering calculateXpForExercise function.');
-    console.log('[XP LOG] Logged Exercise:', loggedExercise);
-    console.log('[XP LOG] Exercise Metadata:', exerciseMetadata);
-    console.log('[XP LOG] Strongest Lifts by Exercise:', strongestLiftsByExercise);
+    const awardedXp = TRACKED_STATS.reduce((acc, stat) => ({ ...acc, [stat]: 0 }), {});
+    if (!loggedExercise || !exerciseMetadata || !statWeights) return awardedXp;
 
-    const awardedXp = TRACKED_STATS.reduce((acc, stat) => {
-        acc[stat] = 0;
-        return acc;
-    }, {});
+    const { category, sets, duration } = loggedExercise;
+    const difficultyMultiplier = getDifficultyMultiplier(exerciseMetadata);
+    const statWeighting = calculateStatWeighting(exerciseMetadata, statWeights);
 
-    if (!loggedExercise || !exerciseMetadata || !statWeights) {
-        console.error("[XP LOG] Missing required data for XP calculation.");
-        return awardedXp;
-    }
+    if (category === 'Lift' && sets) {
+        const exerciseCanonicalName = exerciseMetadata.name;
+        const userBest1RM = strongestLiftsByExercise?.[exerciseCanonicalName]?.oneRm ?? 0;
 
-    const baseXP = (loggedExercise.sets || 0) * 5;
-    console.log(`[XP LOG] Base XP: ${baseXP}`);
-    if (baseXP === 0) return awardedXp;
+        sets.forEach(set => {
+            const { weight, reps } = set;
+            if (weight === undefined || reps === undefined) return;
 
-    let difficultyMultiplier = 1.0; // Default for beginner or if level undefined
-    if (exerciseMetadata.level) {
-        const levelLower = exerciseMetadata.level.toLowerCase();
-        if (levelLower === 'intermediate') difficultyMultiplier = 1.25;
-        else if (levelLower === 'expert' || levelLower === 'advanced') difficultyMultiplier = 1.5; // Assuming expert means advanced
-    }
-    console.log(`[XP LOG] Difficulty Multiplier: ${difficultyMultiplier}`);
+            const currentLift1RM = calculateOneRm(weight, reps);
+            const effortFactor = userBest1RM > 0 ? Math.min(1.0, currentLift1RM / userBest1RM) : 1.0;
+            const baseXP = 5; // Per set
+            const xpForSet = baseXP * difficultyMultiplier * effortFactor;
 
-    let effortFactor = 0;
-    const exerciseCanonicalName = exerciseMetadata.name; // Use canonical name from DB
-    const userBest1RMForExercise = strongestLiftsByExercise?.[exerciseCanonicalName]?.oneRm;
-    console.log(`[XP LOG] User's Best 1RM for ${exerciseCanonicalName}: ${userBest1RMForExercise}`);
-
-    let currentLift1RM = calculateOneRm(loggedExercise.weight, loggedExercise.reps);
-    console.log(`[XP LOG] Current Lift's 1RM: ${currentLift1RM}`);
-
-    if (userBest1RMForExercise && userBest1RMForExercise > 0) {
-        // Use the greater of the current lift's 1RM and the user's known best 1RM for this exercise type
-        // This ensures that if they lift less than their 1RM, the effort is scaled against their max potential.
-        // If they set a new PR, the effort is against that new PR (effectively 1.0 effort for the PR itself).
-        effortFactor = Math.min(1.0, currentLift1RM / userBest1RMForExercise);
-    } else if (currentLift1RM > 0) {
-        // First time doing this exercise, or no historical 1RM, effort is against current lift's 1RM.
-        effortFactor = 1.0; // Max effort for a new PR or first attempt
-    }
-
-    if (loggedExercise.weight === 0 && currentLift1RM === 0) { // For bodyweight exercises with no direct 1RM equivalent
-        effortFactor = 0.5; // Default effort factor for bodyweight non-rep-maxed exercises, can be adjusted
-    }
-    console.log(`[XP LOG] Effort Factor: ${effortFactor}`);
-
-
-    const coreXpValue = baseXP * difficultyMultiplier * effortFactor;
-    console.log(`[XP LOG] Core XP Value: ${coreXpValue}`);
-    if (coreXpValue === 0) return awardedXp;
-
-    for (const statName of TRACKED_STATS) {
-        let totalStatXp = 0;
-        let contributingWeight = 0;
-
-        // Primary Muscles
-        for (const muscle of exerciseMetadata.primaryMuscles || []) {
-            contributingWeight = statWeights.muscles?.[muscle]?.[statName] || 0;
-            totalStatXp += coreXpValue * contributingWeight;
-        }
-        // Secondary Muscles (0.5x weight)
-        for (const muscle of exerciseMetadata.secondaryMuscles || []) {
-            contributingWeight = statWeights.muscles?.[muscle]?.[statName] || 0;
-            totalStatXp += coreXpValue * (contributingWeight * 0.5);
-        }
-        // Force
-        if (exerciseMetadata.force) {
-            contributingWeight = statWeights.force?.[exerciseMetadata.force.toLowerCase()]?.[statName] || 0;
-            totalStatXp += coreXpValue * contributingWeight;
-        }
-        // Mechanic
-        if (exerciseMetadata.mechanic) {
-            contributingWeight = statWeights.mechanic?.[exerciseMetadata.mechanic.toLowerCase()]?.[statName] || 0;
-            totalStatXp += coreXpValue * contributingWeight;
-        }
-        // Equipment
-        if (exerciseMetadata.equipment) {
-            contributingWeight = statWeights.equipment?.[exerciseMetadata.equipment.toLowerCase()]?.[statName] || 0;
-            totalStatXp += coreXpValue * contributingWeight;
-        }
-        // IMPORTANT: Difficulty from stat_weights.json is NOT used here, as per plan.
-
-        if (totalStatXp > 0) {
-            awardedXp[statName] = Math.round(totalStatXp * 100) / 100; // Round to 2 decimal places
+            for (const statName in statWeighting) {
+                awardedXp[statName] += xpForSet * statWeighting[statName];
+            }
+        });
+    } else if (category === 'Stretch' && sets) {
+        sets.forEach(set => {
+            if (set.duration === undefined) return;
+            // XP = 10 * (duration in seconds / 30) * difficultyMultiplier * statWeight
+            const xpForSet = 10 * (set.duration / 30) * difficultyMultiplier;
+            for (const statName in statWeighting) {
+                awardedXp[statName] += xpForSet * statWeighting[statName];
+            }
+        });
+    } else if (category === 'Cardio' && duration) {
+        const mets = exerciseMetadata.mets || 7; // Use 7 if not defined
+        // XP = 25 * (duration in minutes / 60) * (METs / 10) * difficultyMultiplier * statWeight
+        const xpForCardio = 25 * (duration / 60) * (mets / 10) * difficultyMultiplier;
+        for (const statName in statWeighting) {
+            awardedXp[statName] += xpForCardio * statWeighting[statName];
         }
     }
+
+    // Round final XP values
+    for (const statName in awardedXp) {
+        awardedXp[statName] = Math.round(awardedXp[statName] * 100) / 100;
+    }
+
     return awardedXp;
+}
+
+function getDifficultyMultiplier(exerciseMetadata) {
+    if (!exerciseMetadata.level) return 1.0;
+    const level = exerciseMetadata.level.toLowerCase();
+    if (level === 'intermediate') return 1.25;
+    if (level === 'expert' || level === 'advanced') return 1.5;
+    return 1.0;
+}
+
+function calculateStatWeighting(exerciseMetadata, statWeights) {
+    const weighting = TRACKED_STATS.reduce((acc, stat) => ({ ...acc, [stat]: 0 }), {});
+
+    const applyWeight = (category, key, multiplier = 1) => {
+        const weights = statWeights[category]?.[key.toLowerCase()];
+        if (weights) {
+            for (const statName in weights) {
+                if (weighting.hasOwnProperty(statName)) {
+                    weighting[statName] += weights[statName] * multiplier;
+                }
+            }
+        }
+    };
+
+    (exerciseMetadata.primaryMuscles || []).forEach(muscle => applyWeight('muscles', muscle, 1));
+    (exerciseMetadata.secondaryMuscles || []).forEach(muscle => applyWeight('muscles', muscle, 0.5));
+    if (exerciseMetadata.force) applyWeight('force', exerciseMetadata.force);
+    if (exerciseMetadata.mechanic) applyWeight('mechanic', exerciseMetadata.mechanic);
+    if (exerciseMetadata.equipment) applyWeight('equipment', exerciseMetadata.equipment);
+
+    return weighting;
 }
 
 // Apply awarded XP to user's stats and handle leveling up

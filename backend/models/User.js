@@ -3,12 +3,19 @@ const { Schema } = mongoose;
 
 // Subschemas
 
+const SetSchema = new Schema({
+  reps: { type: Number },
+  weight: { type: Number },
+  duration: { type: Number } // in seconds for stretching
+}, { _id: false });
+
 const ExerciseSchema = new Schema({
   date: { type: Date, default: Date.now },
   type: String, // e.g., "Push-ups", "Barbell Squat"
-  sets: Number,
-  reps: Number,
-  weight: Number // Optional for bodyweight
+  category: String, // "Lift", "Stretch", "Cardio"
+  sets: [SetSchema],
+  duration: { type: Number }, // in minutes for cardio
+  intensity: { type: Number } // METs for cardio
 });
 
 const LevelProgressSchema = new Schema({
