@@ -22,14 +22,21 @@ const ExerciseHistory = () => {
                       scrollbar-thin scrollbar-thumb-yellow-500 scrollbar-track-gray-700
                       border border-gray-700 rounded-lg bg-gray-800 bg-opacity-70 p-3">
         {sortedHistory.map((entry, index) => (
-          <div key={entry.id || index} className="bg-gray-700 p-3 rounded-md shadow text-sm">
+          <div key={entry._id || index} className="bg-gray-700 p-3 rounded-md shadow text-sm">
             <p className="font-semibold text-yellow-300">
-              {entry.date ? new Date(entry.date).toLocaleDateString() : 'N/A'} - {entry.date ? new Date(entry.date).toLocaleTimeString() : ''}
+              {entry.type || 'N/A'} - {entry.date ? new Date(entry.date).toLocaleDateString() : 'N/A'}
             </p>
-            <p><strong className="text-gray-300">Type:</strong> {entry.type || 'N/A'}</p>
-            <p><strong className="text-gray-300">Sets:</strong> {entry.sets !== undefined ? entry.sets : 'N/A'}</p>
-            <p><strong className="text-gray-300">Reps:</strong> {entry.reps !== undefined ? entry.reps : 'N/A'}</p>
-            <p><strong className="text-gray-300">Weight:</strong> {entry.weight !== undefined ? entry.weight : 'N/A'} {entry.weightUnit || 'kg'}</p>
+            <div className="pl-4">
+              {entry.category === 'Lift' && entry.sets && entry.sets.map((set, sIndex) => (
+                <p key={sIndex}>Set {sIndex + 1}: {set.reps} reps at {set.weight} lbs</p>
+              ))}
+              {entry.category === 'Stretch' && entry.sets && entry.sets.map((set, sIndex) => (
+                <p key={sIndex}>Set {sIndex + 1}: {set.duration} seconds</p>
+              ))}
+              {entry.category === 'Cardio' && (
+                <p>Duration: {entry.duration} minutes {entry.intensity ? `at intensity ${entry.intensity}` : ''}</p>
+              )}
+            </div>
           </div>
         ))}
       </div>

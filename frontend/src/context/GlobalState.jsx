@@ -15,6 +15,7 @@ const initialState = {
 // Action types
 const LOGIN_SUCCESS = 'LOGIN_SUCCESS';
 const LOGOUT = 'LOGOUT';
+const UPDATE_USER = 'UPDATE_USER';
 const LOAD_EXERCISES_START = 'LOAD_EXERCISES_START';
 const LOAD_EXERCISES_SUCCESS = 'LOAD_EXERCISES_SUCCESS';
 const LOAD_EXERCISES_FAIL = 'LOAD_EXERCISES_FAIL';
@@ -32,6 +33,8 @@ function globalReducer(state, action) {
       return { ...state, currentUser: action.payload, currentUserDetailedContributions: null, error: null };
     case LOGOUT:
       return { ...state, currentUser: null, currentUserDetailedContributions: null, error: null };
+    case UPDATE_USER:
+      return { ...state, currentUser: action.payload };
     case LOAD_EXERCISES_START:
       return { ...state, loadingExercises: true, error: null };
     case LOAD_EXERCISES_SUCCESS:
@@ -73,6 +76,10 @@ export const GlobalStateProvider = ({ children }) => {
 
   const logoutUser = useCallback(() => {
     dispatch({ type: LOGOUT });
+  }, []);
+
+  const updateUser = useCallback((userData) => {
+    dispatch({ type: UPDATE_USER, payload: userData });
   }, []);
 
   const loadExercises = useCallback(async () => {
@@ -154,6 +161,7 @@ export const GlobalStateProvider = ({ children }) => {
         error: state.error,
         loginUser,
         logoutUser,
+        updateUser,
         loadExercises,
         recalculateStats,
         setError,
