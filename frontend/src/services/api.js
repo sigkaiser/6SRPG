@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000'; // Assuming backend runs on port 5000
+const API_BASE_URL = `http://${window.location.hostname}:5000`; // Dynamically set API base URL
 
 export const registerUser = async (userData) => {
   console.log('Attempting to register user:', userData);
