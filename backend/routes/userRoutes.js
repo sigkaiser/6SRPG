@@ -179,7 +179,10 @@ router.post('/:id/exercises', async (req, res) => {
     await user.save();
     // --- End Stat and XP Processing ---
 
-    res.status(200).json(user.exerciseHistory[user.exerciseHistory.length - 1]);
+    res.status(200).json({
+      message: "Exercise logged successfully!",
+      user: user.toJSON()
+    });
 
   } catch (err) {
     console.error('Error adding exercise and updating stats:', err);
