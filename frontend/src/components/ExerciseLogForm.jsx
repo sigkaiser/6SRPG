@@ -56,16 +56,26 @@ const ExerciseLogForm = ({ onLogSuccess }) => {
 
     let exerciseData;
     if (exerciseCategory === 'Lift') {
+      const filteredSets = sets.filter(s => s.reps && s.weight);
+      if (filteredSets.length === 0) {
+        setError("Please fill in at least one complete set.");
+        return;
+      }
       exerciseData = {
         type: selectedExercise,
         category: 'Lift',
-        sets: sets.map(s => ({ reps: parseInt(s.reps, 10), weight: parseFloat(s.weight) }))
+        sets: filteredSets.map(s => ({ reps: parseInt(s.reps, 10), weight: parseFloat(s.weight) }))
       };
     } else if (exerciseCategory === 'Stretch') {
+      const filteredSets = sets.filter(s => s.duration);
+      if (filteredSets.length === 0) {
+        setError("Please fill in at least one complete set.");
+        return;
+      }
       exerciseData = {
         type: selectedExercise,
         category: 'Stretch',
-        sets: sets.map(s => ({ duration: parseInt(s.duration, 10) }))
+        sets: filteredSets.map(s => ({ duration: parseInt(s.duration, 10) }))
       };
     } else if (exerciseCategory === 'Cardio') {
       exerciseData = {
