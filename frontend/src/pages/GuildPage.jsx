@@ -37,7 +37,7 @@ const GuildPage = () => {
 
   const sidebarButtonStyle = {
     backgroundImage: `url(${panel})`,
-    backgroundSize: 'cover',
+    backgroundSize: '100% 100%',
     backgroundPosition: 'center',
     height: '70px',
     color: '#d49942',
