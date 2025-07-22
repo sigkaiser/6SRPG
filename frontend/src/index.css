@@ -1,6 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.text-custom-gold {
+  color: #d49942;
+}
 
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
