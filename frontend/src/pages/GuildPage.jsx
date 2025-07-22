@@ -31,10 +31,11 @@ const GuildPage = () => {
     display: 'flex', // Using flex to align children (main content wrapper)
     alignItems: 'center', // Vertically center the main content wrapper
     justifyContent: 'center', // Horizontally center the main content wrapper
+    overflow: 'hidden', // Prevent scrolling on the body
   };
 
   const baseButtonStyle =
-    'w-1/2 mx-auto text-left py-3 px-5 my-1 text-base font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-opacity-75 transition-transform transform hover:scale-105';
+    'w-full md:w-1/2 mx-auto text-left py-3 px-5 my-1 text-base font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-opacity-75 transition-transform transform hover:scale-105';
   const sidebarButtonStyle = `${baseButtonStyle} bg-gray-700 hover:bg-gray-600 text-yellow-400 focus:ring-gray-500`;
   // active style for sidebar buttons can be added if desired, e.g., based on currentView
   // const activeSidebarButtonStyle = `${sidebarButtonStyle} bg-gray-600 ring-2 ring-yellow-500`;
