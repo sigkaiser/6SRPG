@@ -5,6 +5,7 @@ import PlayerCard from '../components/PlayerCard';
 import ExerciseLogForm from '../components/ExerciseLogForm';
 import ExerciseHistory from '../components/ExerciseHistory';
 import guildBg from '../../assets/guild-bg.png';
+import panel from '../../assets/panel.png';
 
 const GuildPage = () => {
   const { currentUser, error: globalError, clearError } = useGlobalState();
@@ -34,12 +35,22 @@ const GuildPage = () => {
     overflow: 'hidden', // Prevent scrolling on the body
   };
 
-  const baseButtonStyle =
-    'w-full md:w-1/2 mx-auto text-left py-3 px-5 my-1 text-base font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-opacity-75 transition-transform transform hover:scale-105';
-  const sidebarButtonStyle = `${baseButtonStyle} bg-gray-700 hover:bg-gray-600 text-yellow-400 focus:ring-gray-500`;
-  // active style for sidebar buttons can be added if desired, e.g., based on currentView
-  // const activeSidebarButtonStyle = `${sidebarButtonStyle} bg-gray-600 ring-2 ring-yellow-500`;
-  // const backToTownButtonStyle = `inline-block py-2 px-5 mx-2 my-2 text-base font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-opacity-75 transition-transform transform hover:scale-105 bg-gray-700 hover:bg-gray-800 text-yellow-400 focus:ring-gray-600`;
+  const sidebarButtonStyle = {
+    backgroundImage: `url(${panel})`,
+    backgroundSize: '100% 100%',
+    backgroundPosition: 'center',
+    height: '90px',
+    color: '#d49942',
+    fontFamily: 'Crimson Pro',
+    fontWeight: 'bold',
+    fontSize: '2rem',
+    display: 'flex',
+    alignItems: 'left',
+    justifyContent: 'center',
+    width: '75%',
+    transform: 'scale(0.8)',
+  };
+
 
 
   if (!currentUser) {
@@ -81,12 +92,12 @@ const GuildPage = () => {
         {/* Sidebar */}
         <div className="w-1/3 max-w-xs bg-gray-800 bg-opacity-60 p-6 flex flex-col space-y-4 overflow-y-hidden overflow-x-hidden h-full mr-6">
           <h1 className="text-3xl font-bold mb-6 text-yellow-400 text-center">Guild</h1>
-          <button className={sidebarButtonStyle} onClick={() => setCurrentView('questBoard')}>View Quest Board</button>
-          <button className={sidebarButtonStyle} onClick={() => setCurrentView('playerCard')}>View Player Card</button>
-          <button className={sidebarButtonStyle} onClick={() => setCurrentView('logExercise')}>Log Exercise</button>
-          <button className={sidebarButtonStyle} onClick={() => setCurrentView('exerciseHistory')}>View Exercise History</button>
-          <Link to="/" className="w-1/2 mx-auto"> {/* Ensure Link takes up the same width as button for consistent styling */}
-            <button className={`${sidebarButtonStyle} w-full`}> {/* Button takes full width of its Link container */}
+          <button style={sidebarButtonStyle} onClick={() => setCurrentView('questBoard')}>View Quest Board</button>
+          <button style={sidebarButtonStyle} onClick={() => setCurrentView('playerCard')}>View Player Card</button>
+          <button style={sidebarButtonStyle} onClick={() => setCurrentView('logExercise')}>Log Exercise</button>
+          <button style={sidebarButtonStyle} onClick={() => setCurrentView('exerciseHistory')}>View Exercise History</button>
+          <Link to="/">
+            <button style={sidebarButtonStyle}>
               Return to Town
             </button>
           </Link>

@@ -5,7 +5,14 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      backgroundImage: {
+        'panel': "url('assets/panel.png')",
+      },
+      fontFamily: {
+        'crimson-pro': ['"Crimson Pro"', 'serif'],
+      },
+    },
   },
   plugins: [],
 }
