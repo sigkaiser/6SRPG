@@ -52,6 +52,7 @@ const GuildPage = () => {
   };
 
 
+
   if (!currentUser) {
     return (
         <div style={pageDynamicStyle} className="relative flex flex-col items-center justify-center p-5 text-white">
