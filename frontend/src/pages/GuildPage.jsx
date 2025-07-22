@@ -39,15 +39,16 @@ const GuildPage = () => {
     backgroundImage: `url(${panel})`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
-    height: '140px',
+    height: '70px',
     color: '#d49942',
     fontFamily: 'Crimson Pro',
     fontWeight: 'bold',
-    fontSize: '1.5rem',
+    fontSize: '1rem',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%'
+    width: '100%',
+    transform: 'scale(0.9)',
   };
 
 
@@ -94,7 +95,7 @@ const GuildPage = () => {
           <button style={sidebarButtonStyle} onClick={() => setCurrentView('playerCard')}>View Player Card</button>
           <button style={sidebarButtonStyle} onClick={() => setCurrentView('logExercise')}>Log Exercise</button>
           <button style={sidebarButtonStyle} onClick={() => setCurrentView('exerciseHistory')}>View Exercise History</button>
-          <Link to="/" className="w-full">
+          <Link to="/">
             <button style={sidebarButtonStyle}>
               Return to Town
             </button>
