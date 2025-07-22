@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       backgroundImage: {
-        'panel': "url('/assets/panel.png')",
+        'panel': "url('assets/panel.png')",
       },
       fontFamily: {
         'crimson-pro': ['"Crimson Pro"', 'serif'],
