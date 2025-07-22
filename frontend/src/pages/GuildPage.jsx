@@ -36,7 +36,7 @@ const GuildPage = () => {
 
   const baseButtonStyle =
     'w-full md:w-1/2 mx-auto text-left py-3 px-5 my-1 text-base font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-opacity-75 transition-transform transform hover:scale-105';
-  const sidebarButtonStyle = `w-full h-[140px] bg-panel bg-cover bg-center text-custom-gold font-crimson-pro font-bold text-2xl flex items-center justify-center`;
+  const sidebarButtonStyle = `w-full h-[140px] bg-panel bg-cover bg-center text-[#d49942] font-crimson-pro font-bold text-2xl flex items-center justify-center`;
   // active style for sidebar buttons can be added if desired, e.g., based on currentView
   // const activeSidebarButtonStyle = `${sidebarButtonStyle} bg-gray-600 ring-2 ring-yellow-500`;
   // const backToTownButtonStyle = `inline-block py-2 px-5 mx-2 my-2 text-base font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-opacity-75 transition-transform transform hover:scale-105 bg-gray-700 hover:bg-gray-800 text-yellow-400 focus:ring-gray-600`;
