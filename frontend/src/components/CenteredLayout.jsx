@@ -28,20 +28,6 @@ const CenteredLayout = ({
   return (
     <div style={pageDynamicStyle} className="text-white overflow-hidden">
       <div className="flex flex-col w-full h-full max-w-6xl bg-gray-900 bg-opacity-80 rounded-xl shadow-2xl backdrop-blur-sm overflow-hidden p-6 items-center justify-center" style={{ maxHeight: '90vh' }}>
-        <h1 className="text-3xl font-bold mb-6 text-yellow-400 text-center">{pageTitle}</h1>
-        <div className="flex flex-col space-y-4 overflow-y-hidden overflow-x-hidden">
-        {buttons.map((button, index) => (
-          <Button
-            key={index}
-            label={button.label}
-            onClick={button.onClick}
-            to={button.to}
-            panel={panel}
-            fontColor={fontColor}
-            justify="center"
-          />
-        ))}
-        </div>
         <div className="flex-1 p-6 sm:p-8 overflow-y-auto">
           {error && (
             <div className="bg-red-600 bg-opacity-90 border border-red-700 text-white p-3 mb-5 rounded-md shadow-lg">
@@ -55,6 +41,20 @@ const CenteredLayout = ({
             </div>
           )}
           {renderContent()}
+        </div>
+        <h1 className="text-3xl font-bold mb-6 text-yellow-400 text-center">{pageTitle}</h1>
+        <div className="flex flex-col space-y-4 overflow-y-hidden overflow-x-hidden">
+        {buttons.map((button, index) => (
+          <Button
+            key={index}
+            label={button.label}
+            onClick={button.onClick}
+            to={button.to}
+            panel={panel}
+            fontColor={fontColor}
+            justify="center"
+          />
+        ))}
         </div>
       </div>
     </div>
