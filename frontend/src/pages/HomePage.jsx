@@ -42,6 +42,7 @@ const HomePage = () => {
       clearError={clearError}
       currentUser={currentUser}
       buttonJustify="center"
+      isAuthRequired={true}
     />
   );
 };
