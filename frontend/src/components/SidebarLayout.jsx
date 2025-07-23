@@ -13,6 +13,7 @@ const SidebarLayout = ({
   buttonJustify = 'left',
   panel: customPanel,
   fontColor = '#d49942',
+  isAuthRequired = true,
 }) => {
   const panel = customPanel || defaultPanel;
 
@@ -46,7 +47,7 @@ const SidebarLayout = ({
     transform: 'scale(0.7)',
   });
 
-  if (!currentUser) {
+  if (isAuthRequired && !currentUser) {
     return (
       <div style={pageDynamicStyle} className="relative flex flex-col items-center justify-center p-5 text-white">
         <p>Loading... If you are not redirected, please <Link to="/" className="text-yellow-400 hover:text-yellow-300">return to Town</Link> to log in.</p>

@@ -103,6 +103,7 @@ const TownPage = () => {
       panel={panel2}
       fontColor="black"
       buttonJustify="center"
+      isAuthRequired={false}
     />
   );
 };

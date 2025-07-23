@@ -54,6 +54,7 @@ const GuildPage = () => {
       error={globalError}
       clearError={clearError}
       currentUser={currentUser}
+      isAuthRequired={true}
     />
   );
 };
