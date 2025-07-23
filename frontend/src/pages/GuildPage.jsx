@@ -39,16 +39,17 @@ const GuildPage = () => {
     backgroundImage: `url(${panel})`,
     backgroundSize: '100% 100%',
     backgroundPosition: 'center',
+    backgroundColor: 'transparent',
     height: '90px',
     color: '#d49942',
     fontFamily: 'Crimson Pro',
     fontWeight: 'bold',
-    fontSize: '2rem',
+    fontSize: '1.3rem',
     display: 'flex',
-    alignItems: 'left',
+    alignItems: 'center',
     justifyContent: 'center',
-    width: '75%',
-    transform: 'scale(0.8)',
+    width: '110%',
+    transform: 'scale(0.7)',
   };
 
 
