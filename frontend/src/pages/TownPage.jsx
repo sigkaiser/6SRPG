@@ -94,7 +94,6 @@ const TownPage = () => {
   return (
     <CenteredLayout
       bgImage={townMap3}
-      pageTitle="Town"
       buttons={currentUser ? mainButtons : authButtons}
       renderContent={renderContentArea}
       error={globalError}
