@@ -4,6 +4,7 @@ import { useGlobalState } from '../context/GlobalState';
 import LoginForm from '../components/LoginForm';
 import RegistrationForm from '../components/RegistrationForm';
 import townMap3 from '../../assets/town-map3.png';
+import panel2 from '../../assets/panel2.png';
 
 const TownPage = () => {
   const { currentUser, error: globalError, clearError, setError } = useGlobalState();
@@ -24,6 +25,22 @@ const TownPage = () => {
   const primaryButtonStyle = `${baseButtonStyle} bg-yellow-500 hover:bg-yellow-600 text-black focus:ring-yellow-400`;
   const secondaryButtonStyle = `${baseButtonStyle} bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500`;
 
+  const townButtonStyle = {
+    backgroundImage: `url(${panel2})`,
+    backgroundSize: '100% 100%',
+    backgroundPosition: 'center',
+    backgroundColor: 'transparent',
+    height: '90px',
+    color: 'black',
+    fontFamily: 'Crimson Pro',
+    fontWeight: 'bold',
+    fontSize: '1.3rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '110%',
+    transform: 'scale(0.7)',
+  };
 
   const handleShowLogin = () => {
     clearError();
@@ -138,18 +155,15 @@ const TownPage = () => {
             </div>
           )
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Link
-              to="/guild"
-              className="bg-black bg-opacity-0 text-yellow-400 border-2 border-yellow-500 rounded-xl p-6 text-2xl font-bold shadow-lg hover:bg-yellow-400 hover:text-black hover:border-yellow-700 transition-all duration-200 transform hover:scale-105 flex items-center justify-center w-48 sm:w-60"
-            >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Link to="/guild" style={townButtonStyle}>
               Guild
             </Link>
-            <Link
-              to="/dungeon"
-              className="bg-black bg-opacity-0 text-yellow-400 border-2 border-yellow-500 rounded-xl p-6 text-2xl font-bold shadow-lg hover:bg-yellow-400 hover:text-black hover:border-yellow-700 transition-all duration-200 transform hover:scale-105 flex items-center justify-center w-48 sm:w-60"
-            >
+            <Link to="/dungeon" style={townButtonStyle}>
               Dungeon
+            </Link>
+            <Link to="/home" style={townButtonStyle}>
+              Home
             </Link>
           </div>
         )}
