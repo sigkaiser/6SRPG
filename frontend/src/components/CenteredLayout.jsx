@@ -43,7 +43,7 @@ const CenteredLayout = ({
           {renderContent()}
         </div>
         <h1 className="text-3xl font-bold mb-6 text-yellow-400 text-center">{pageTitle}</h1>
-        <div className="flex flex-col space-y-4 overflow-y-hidden overflow-x-hidden">
+        <div className="flex flex-col space-y-4 overflow-y-hidden overflow-x-hidden" style={{ marginBottom: '20px' }}>
         {buttons.map((button, index) => (
           <Button
             key={index}
