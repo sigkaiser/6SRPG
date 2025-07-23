@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Button from './Button';
 import defaultPanel from '../../assets/panel.png';
 
 const SidebarLayout = ({
@@ -61,17 +61,15 @@ const SidebarLayout = ({
         <div className="w-1/3 max-w-xs bg-gray-800 bg-opacity-60 p-6 flex flex-col space-y-4 overflow-y-hidden overflow-x-hidden h-full mr-6">
           <h1 className="text-3xl font-bold mb-6 text-yellow-400 text-center">{pageTitle}</h1>
           {buttons.map((button, index) => (
-            button.to ? (
-              <Link key={index} to={button.to}>
-                <button style={sidebarButtonStyle(buttonJustify)}>
-                  {button.label}
-                </button>
-              </Link>
-            ) : (
-              <button key={index} style={sidebarButtonStyle(buttonJustify)} onClick={button.onClick}>
-                {button.label}
-              </button>
-            )
+            <Button
+              key={index}
+              label={button.label}
+              onClick={button.onClick}
+              to={button.to}
+              panel={panel}
+              fontColor={fontColor}
+              justify={buttonJustify}
+            />
           ))}
         </div>
         <div className="flex-1 p-6 sm:p-8 overflow-y-auto">

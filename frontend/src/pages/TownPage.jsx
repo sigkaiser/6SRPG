@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useGlobalState } from '../context/GlobalState';
 import LoginForm from '../components/LoginForm';
 import RegistrationForm from '../components/RegistrationForm';
-import SidebarLayout from '../components/SidebarLayout';
+import CenteredLayout from '../components/CenteredLayout';
 import townMap3 from '../../assets/town-map3.png';
 import panel2 from '../../assets/panel2.png';
 
@@ -92,7 +92,7 @@ const TownPage = () => {
   ];
 
   return (
-    <SidebarLayout
+    <CenteredLayout
       bgImage={townMap3}
       pageTitle="Town"
       buttons={currentUser ? mainButtons : authButtons}
@@ -102,8 +102,6 @@ const TownPage = () => {
       currentUser={currentUser}
       panel={panel2}
       fontColor="black"
-      buttonJustify="center"
-      isAuthRequired={false}
     />
   );
 };
