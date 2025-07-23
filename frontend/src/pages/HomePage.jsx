@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useGlobalState } from '../context/GlobalState';
 import homeBg from '../../assets/home.png';
-import panel2 from '../../assets/panel2.png';
+import panel from '../../assets/panel.png';
 
 const HomePage = () => {
   const { currentUser, error: globalError, clearError } = useGlobalState();
@@ -28,7 +28,7 @@ const HomePage = () => {
   };
 
   const sidebarButtonStyle = {
-    backgroundImage: `url(${panel2})`,
+    backgroundImage: `url(${panel})`,
     backgroundSize: '100% 100%',
     backgroundPosition: 'center',
     backgroundColor: 'transparent',
