@@ -25,7 +25,7 @@ const Button = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: justify,
-    width: '220px',
+    width: '110%',
     transform: 'scale(0.7)',
   };
 
