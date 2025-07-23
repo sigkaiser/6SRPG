@@ -31,7 +31,7 @@ const Button = ({
 
   if (to) {
     return (
-      <Link to={to}>
+      <Link to={to} style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
         <button style={buttonStyle}>{label}</button>
       </Link>
     );
