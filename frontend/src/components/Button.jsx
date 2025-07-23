@@ -29,18 +29,26 @@ const Button = ({
     transform: 'scale(0.7)',
   };
 
+  const buttonWrapperStyle = {
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'center',
+  };
+
   if (to) {
     return (
-      <Link to={to} style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+      <Link to={to} style={buttonWrapperStyle}>
         <button style={buttonStyle}>{label}</button>
       </Link>
     );
   }
 
   return (
-    <button style={buttonStyle} onClick={onClick}>
-      {label}
-    </button>
+    <div style={buttonWrapperStyle}>
+      <button style={buttonStyle} onClick={onClick}>
+        {label}
+      </button>
+    </div>
   );
 };
 
