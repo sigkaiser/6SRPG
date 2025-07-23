@@ -138,7 +138,7 @@ const TownPage = () => {
             </div>
           )
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Link
               to="/guild"
               className="bg-black bg-opacity-0 text-yellow-400 border-2 border-yellow-500 rounded-xl p-6 text-2xl font-bold shadow-lg hover:bg-yellow-400 hover:text-black hover:border-yellow-700 transition-all duration-200 transform hover:scale-105 flex items-center justify-center w-48 sm:w-60"
@@ -150,6 +150,12 @@ const TownPage = () => {
               className="bg-black bg-opacity-0 text-yellow-400 border-2 border-yellow-500 rounded-xl p-6 text-2xl font-bold shadow-lg hover:bg-yellow-400 hover:text-black hover:border-yellow-700 transition-all duration-200 transform hover:scale-105 flex items-center justify-center w-48 sm:w-60"
             >
               Dungeon
+            </Link>
+            <Link
+              to="/home"
+              className="bg-black bg-opacity-0 text-yellow-400 border-2 border-yellow-500 rounded-xl p-6 text-2xl font-bold shadow-lg hover:bg-yellow-400 hover:text-black hover:border-yellow-700 transition-all duration-200 transform hover:scale-105 flex items-center justify-center w-48 sm:w-60"
+            >
+              Home
             </Link>
           </div>
         )}

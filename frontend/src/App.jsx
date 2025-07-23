@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import TownPage from './pages/TownPage';
 import GuildPage from './pages/GuildPage';
 import DungeonPage from './pages/DungeonPage';
+import HomePage from './pages/HomePage';
 import { useGlobalState } from './context/GlobalState';
 import './App.css';
 
@@ -29,6 +30,10 @@ function App() {
         <Route
           path="/dungeon"
           element={<ProtectedRoute element={<DungeonPage />} />}
+        />
+        <Route
+          path="/home"
+          element={<ProtectedRoute element={<HomePage />} />}
         />
       </Routes>
     </>
