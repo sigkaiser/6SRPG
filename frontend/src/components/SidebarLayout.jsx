@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import panel from '../../assets/panel.png';
+import defaultPanel from '../../assets/panel.png';
 
 const SidebarLayout = ({
   bgImage,
@@ -10,8 +10,12 @@ const SidebarLayout = ({
   error,
   clearError,
   currentUser,
-  buttonJustify = 'left', // Default to 'left'
+  buttonJustify = 'left',
+  panel: customPanel,
+  fontColor = '#d49942',
 }) => {
+  const panel = customPanel || defaultPanel;
+
   const pageDynamicStyle = {
     backgroundImage: `url(${bgImage})`,
     backgroundSize: 'cover',
@@ -31,7 +35,7 @@ const SidebarLayout = ({
     backgroundPosition: 'center',
     backgroundColor: 'transparent',
     height: '90px',
-    color: '#d49942',
+    color: fontColor,
     fontFamily: 'Crimson Pro',
     fontWeight: 'bold',
     fontSize: '1.3rem',
