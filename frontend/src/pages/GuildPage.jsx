@@ -1,66 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Link, Navigate } from 'react-router-dom';
 import { useGlobalState } from '../context/GlobalState';
 import PlayerCard from '../components/PlayerCard';
 import ExerciseLogForm from '../components/ExerciseLogForm';
 import ExerciseHistory from '../components/ExerciseHistory';
+import SidebarLayout from '../components/SidebarLayout';
 import guildBg from '../../assets/guild-bg.png';
-import panel from '../../assets/panel.png';
 
 const GuildPage = () => {
   const { currentUser, error: globalError, clearError } = useGlobalState();
-  // currentView now manages states within the logged-in Guild experience
-  // Default view is null (nothing selected)
   const [currentView, setCurrentView] = useState(null);
 
   useEffect(() => {
     if (currentUser) {
       clearError();
-      // No need to reset currentView to 'loggedInMain' as the sidebar handles navigation.
-      // If currentView is not a recognized one, it defaults to 'questBoard' or you can add specific logic.
     }
-    // Redirection for non-logged-in users is handled by App.jsx's ProtectedRoute
   }, [currentUser, clearError]);
-
-  const pageDynamicStyle = {
-    backgroundImage: `url(${guildBg})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center center',
-    backgroundRepeat: 'no-repeat',
-    height: '100vh', // Ensure it covers the full viewport height
-    width: '100vw',
-    display: 'flex', // Using flex to align children (main content wrapper)
-    alignItems: 'center', // Vertically center the main content wrapper
-    justifyContent: 'center', // Horizontally center the main content wrapper
-    overflow: 'hidden', // Prevent scrolling on the body
-  };
-
-  const sidebarButtonStyle = {
-    backgroundImage: `url(${panel})`,
-    backgroundSize: '100% 100%',
-    backgroundPosition: 'center',
-    backgroundColor: 'transparent',
-    height: '90px',
-    color: '#d49942',
-    fontFamily: 'Crimson Pro',
-    fontWeight: 'bold',
-    fontSize: '1.3rem',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '110%',
-    transform: 'scale(0.7)',
-  };
-
-
-
-  if (!currentUser) {
-    return (
-        <div style={pageDynamicStyle} className="relative flex flex-col items-center justify-center p-5 text-white">
-            <p>Loading Guild... If you are not redirected, please <Link to="/" className="text-yellow-400 hover:text-yellow-300">return to Town</Link> to log in.</p>
-        </div>
-    );
-  }
 
   const renderContentArea = () => {
     switch (currentView) {
@@ -73,55 +27,34 @@ const GuildPage = () => {
           </div>
         );
       case 'playerCard':
-        return <PlayerCard />; // PlayerCard might need internal styling adjustments for this new layout
+        return <PlayerCard />;
       case 'logExercise':
-        // onLogSuccess can navigate to 'questBoard' or 'playerCard' or stay, depending on desired UX
         return <ExerciseLogForm onLogSuccess={() => setCurrentView('questBoard')} />;
       case 'exerciseHistory':
-        return <ExerciseHistory />; // ExerciseHistory might need internal styling adjustments
+        return <ExerciseHistory />;
       default:
-        // If currentView is null or unrecognized, render nothing.
         return null;
     }
   };
 
+  const buttons = [
+    { label: 'View Quest Board', onClick: () => setCurrentView('questBoard') },
+    { label: 'View Player Card', onClick: () => setCurrentView('playerCard') },
+    { label: 'Log Exercise', onClick: () => setCurrentView('logExercise') },
+    { label: 'View Exercise History', onClick: () => setCurrentView('exerciseHistory') },
+    { label: 'Return to Town', to: '/' },
+  ];
+
   return (
-    <div style={pageDynamicStyle} className="text-white overflow-hidden">
-      {/* Overall wrapper for sidebar and content, with background opacity and blur */}
-      <div className="flex w-full h-full max-w-6xl bg-gray-900 bg-opacity-80 rounded-xl shadow-2xl backdrop-blur-sm overflow-hidden" style={{maxHeight: '90vh'}}>
-
-        {/* Sidebar */}
-        <div className="w-1/3 max-w-xs bg-gray-800 bg-opacity-60 p-6 flex flex-col space-y-4 overflow-y-hidden overflow-x-hidden h-full mr-6">
-          <h1 className="text-3xl font-bold mb-6 text-yellow-400 text-center">Guild</h1>
-          <button style={sidebarButtonStyle} onClick={() => setCurrentView('questBoard')}>View Quest Board</button>
-          <button style={sidebarButtonStyle} onClick={() => setCurrentView('playerCard')}>View Player Card</button>
-          <button style={sidebarButtonStyle} onClick={() => setCurrentView('logExercise')}>Log Exercise</button>
-          <button style={sidebarButtonStyle} onClick={() => setCurrentView('exerciseHistory')}>View Exercise History</button>
-          <Link to="/">
-            <button style={sidebarButtonStyle}>
-              Return to Town
-            </button>
-          </Link>
-        </div>
-
-        {/* Content Area */}
-        <div className="flex-1 p-6 sm:p-8 overflow-y-auto">
-          {globalError && (
-            <div className="bg-red-600 bg-opacity-90 border border-red-700 text-white p-3 mb-5 rounded-md shadow-lg">
-              <p className="font-semibold">Error: {globalError}</p>
-              <button
-                onClick={clearError}
-                // Using a more generic button style or define one if secondaryButtonStyle was removed/changed
-                className={`py-1 px-2 mt-2 text-xs rounded-md bg-red-500 hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-opacity-75`}
-              >
-                Dismiss
-              </button>
-            </div>
-          )}
-          {renderContentArea()}
-        </div>
-      </div>
-    </div>
+    <SidebarLayout
+      bgImage={guildBg}
+      pageTitle="Guild"
+      buttons={buttons}
+      renderContent={renderContentArea}
+      error={globalError}
+      clearError={clearError}
+      currentUser={currentUser}
+    />
   );
 };
 
