@@ -40,7 +40,7 @@ const PreferencesPage = () => {
         }
       } catch (error) {
         console.error("PreferencesPage: fetchOptions error", error);
-        setError(.message);
+        setError(error.message);
       }
     };
 
