@@ -1,8 +1,20 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
+const schema = require('../data/schema.json');
+const exercises = require('../data/exercises.json');
 
 const router = express.Router();
+
+// GET /api/users/data/schema
+router.get('/data/schema', (req, res) => {
+  res.json(schema);
+});
+
+// GET /api/users/data/exercises
+router.get('/data/exercises', (req, res) => {
+  res.json(exercises);
+});
 
 // POST /api/users/register
 router.post('/register', async (req, res) => {

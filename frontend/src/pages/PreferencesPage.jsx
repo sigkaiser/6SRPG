@@ -2,20 +2,43 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useGlobalState } from '../context/GlobalState';
 import SidebarLayout from '../components/SidebarLayout';
 import homeBg from '../../assets/home.png';
-import { updateUserPreferences } from '../services/api';
-import schema from '../../../backend/data/schema.json';
-import exercises from '../../../backend/data/exercises.json';
+import { updateUserPreferences, getSchema, getExercises } from '../services/api';
 
 const PreferencesPage = () => {
   const { currentUser, setCurrentUser, error: globalError, clearError, setError } = useGlobalState();
 
   const [preferences, setPreferences] = useState(currentUser?.preferences || {});
+  const [equipmentOptions, setEquipmentOptions] = useState([]);
+  const [muscleOptions, setMuscleOptions] = useState([]);
+  const [exerciseOptions, setExerciseOptions] = useState([]);
 
   useEffect(() => {
     if (currentUser) {
       setPreferences(currentUser.preferences);
     }
-  }, [currentUser]);
+    const fetchOptions = async () => {
+      try {
+        const schemaRes = await getSchema();
+        if (schemaRes.success) {
+          setEquipmentOptions(schemaRes.data.properties.equipment.enum.filter(e => e));
+          setMuscleOptions(schemaRes.data.properties.primaryMuscles.items[0].enum.filter(m => m));
+        } else {
+          setError(schemaRes.message);
+        }
+
+        const exercisesRes = await getExercises();
+        if (exercisesRes.success) {
+          setExerciseOptions(exercisesRes.data.map(e => e.name));
+        } else {
+          setError(exercisesRes.message);
+        }
+      } catch (error) {
+        setError(error.message);
+      }
+    };
+
+    fetchOptions();
+  }, [currentUser, setError]);
 
   const handlePreferenceChange = async (field, value) => {
     const updatedPreferences = { ...preferences, [field]: value };
@@ -37,9 +60,6 @@ const PreferencesPage = () => {
     "Improve cardio endurance", "Improve flexibility mobility", "Improve explosive power",
     "General fitness", "Weight loss", "Muscle hypertrophy (size)", "Active recovery / injury rehab"
   ], []);
-  const equipmentOptions = useMemo(() => schema.properties.equipment.enum.filter(e => e), []);
-  const muscleOptions = useMemo(() => schema.properties.primaryMuscles.items[0].enum.filter(m => m), []);
-  const exerciseOptions = useMemo(() => exercises.map(e => e.name), []);
 
   const renderContentArea = () => {
     if (!currentUser) return <p>Loading...</p>;
