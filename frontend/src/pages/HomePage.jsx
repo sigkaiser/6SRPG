@@ -28,14 +28,14 @@ const HomePage = () => {
     { label: 'Skills', onClick: () => setCurrentView('skills') },
     { label: 'Inventory', onClick: () => setCurrentView('inventory') },
     { label: 'Equipment', onClick: () => setCurrentView('equipment') },
-    { label: 'Active Quests', onClick: () => setCurrentView('activeQuests') },
+    { label: 'Preferences', to: '/preferences' },
     { label: 'Return to Town', to: '/' },
   ];
 
   return (
     <SidebarLayout
       bgImage={homeBg}
-      pageTitle="Home"
+      pageTitle="House"
       buttons={buttons}
       renderContent={renderContentArea}
       error={globalError}

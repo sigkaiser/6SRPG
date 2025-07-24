@@ -4,6 +4,7 @@ import TownPage from './pages/TownPage';
 import GuildPage from './pages/GuildPage';
 import DungeonPage from './pages/DungeonPage';
 import HomePage from './pages/HomePage';
+import PreferencesPage from './pages/PreferencesPage';
 import { useGlobalState } from './context/GlobalState';
 import './App.css';
 
@@ -34,6 +35,10 @@ function App() {
         <Route
           path="/home"
           element={<ProtectedRoute element={<HomePage />} />}
+        />
+        <Route
+          path="/preferences"
+          element={<ProtectedRoute element={<PreferencesPage />} />}
         />
       </Routes>
     </>
