@@ -107,8 +107,11 @@ const UserSchema = new Schema({
   lastLogin: Date,
   dailyLoginStreak: { type: Number, default: 0 },
   preferences: {
-    darkMode: { type: Boolean, default: false },
-    units: { type: String, enum: ['metric', 'imperial'], default: 'metric' }
+    trainingGoals: { type: [String], default: [] },
+    excludedEquipment: { type: [String], default: [] },
+    excludedMuscles: { type: [String], default: [] },
+    excludedExercises: { type: [String], default: [] },
+    customInstructions: { type: String, default: '' }
   }
 
 }, { timestamps: true });

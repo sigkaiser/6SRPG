@@ -272,4 +272,26 @@ router.post('/:userId/recalculate-stats', async (req, res) => {
     }
 });
 
+// PUT /api/users/:id/preferences
+router.put('/:id/preferences', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const { preferences } = req.body;
+    user.preferences.trainingGoals = preferences.trainingGoals;
+    user.preferences.excludedEquipment = preferences.excludedEquipment;
+    user.preferences.excludedMuscles = preferences.excludedMuscles;
+    user.preferences.excludedExercises = preferences.excludedExercises;
+    user.preferences.customInstructions = preferences.customInstructions;
+    await user.save();
+
+    res.json({ message: 'Preferences updated successfully', user: user.toJSON() });
+  } catch (err) {
+    res.status(500).json({ error: 'Could not update preferences' });
+  }
+});
+
 module.exports = router;

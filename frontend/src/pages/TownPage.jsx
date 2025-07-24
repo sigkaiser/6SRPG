@@ -88,7 +88,7 @@ const TownPage = () => {
   const mainButtons = [
     { label: 'Guild', to: '/guild' },
     { label: 'Dungeon', to: '/dungeon' },
-    { label: 'Home', to: '/home' },
+    { label: 'House', to: '/home' },
   ];
 
   return (
