@@ -41,6 +41,7 @@ const PreferencesPage = () => {
   }, [currentUser, setError]);
 
   const handlePreferenceChange = async (field, value) => {
+    if (!currentUser) return;
     const updatedPreferences = { ...preferences, [field]: value };
     setPreferences(updatedPreferences);
     try {
