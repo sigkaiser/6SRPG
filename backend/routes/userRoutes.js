@@ -1,19 +1,33 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
-const schema = require('../data/schema.json');
-const exercises = require('../data/exercises.json');
+const fs = require('fs');
+const path = require('path');
 
 const router = express.Router();
 
 // GET /api/users/data/schema
 router.get('/data/schema', (req, res) => {
-  res.json(schema);
+  const schemaPath = path.join(__dirname, '../data/schema.json');
+  fs.readFile(schemaPath, 'utf8', (err, data) => {
+    if (err) {
+      res.status(500).json({ error: 'Could not read schema file' });
+      return;
+    }
+    res.json(JSON.parse(data));
+  });
 });
 
 // GET /api/users/data/exercises
 router.get('/data/exercises', (req, res) => {
-  res.json(exercises);
+  const exercisesPath = path.join(__dirname, '../data/exercises.json');
+  fs.readFile(exercisesPath, 'utf8', (err, data) => {
+    if (err) {
+      res.status(500).json({ error: 'Could not read exercises file' });
+      return;
+    }
+    res.json(JSON.parse(data));
+  });
 });
 
 // POST /api/users/register
