@@ -38,7 +38,7 @@ const PreferencesPage = () => {
     };
 
     fetchOptions();
-  }, [setError]);
+  }, [currentUser, setError]);
 
   const handlePreferenceChange = async (field, value) => {
     if (!currentUser) return;
