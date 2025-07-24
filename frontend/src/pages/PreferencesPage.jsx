@@ -45,7 +45,7 @@ const PreferencesPage = () => {
     };
 
     fetchOptions();
-  }, [currentUser, setError]);
+  }, [setError]);
 
   const handlePreferenceChange = async (field, value) => {
     if (!currentUser) return;
@@ -156,11 +156,11 @@ const MultiSelectDropdown = ({ label, options, selected, onChange }) => {
       </button>
 
       {isOpen && (
-        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-y-auto focus:outline-none sm:text-sm">
           {options.map(option => (
             <div
               key={option}
-              className="text-gray-900 cursor-default select-none relative py-2 pl-3 pr-9 hover:bg-indigo-600 hover:text-white"
+              className="text-gray-900 cursor-default select-none relative py-2 pl-3 pr-9 bg-white hover:bg-indigo-600 hover:text-white"
               onClick={() => handleSelect(option)}
             >
               <span className={`font-normal block truncate ${selected.includes(option) ? 'font-semibold' : ''}`}>
