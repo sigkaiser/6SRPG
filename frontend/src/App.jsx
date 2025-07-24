@@ -19,6 +19,7 @@ const ProtectedRoute = ({ element }) => {
 };
 
 function App() {
+  console.log("App.jsx: Rendering routes");
   return (
     <>
       <Navbar />

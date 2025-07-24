@@ -159,7 +159,7 @@ const MultiSelectDropdown = ({ label, options, selected, onChange }) => {
           {options.map(option => (
             <div
               key={option}
-              className="text-gray-900 cursor-default select-none relative py-2 pl-3 pr-9 hover:bg-indigo-600 hover:text-white"
+              className="text-gray-900 cursor-default select-none relative py-2 pl-3 pr-9 hover:bg-indigo-600"
               onClick={() => handleSelect(option)}
             >
               <span className={`font-normal block truncate ${selected.includes(option) ? 'font-semibold' : ''}`}>
