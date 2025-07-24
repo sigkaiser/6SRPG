@@ -5,7 +5,7 @@ import homeBg from '../../assets/home.png';
 import { updateUserPreferences, getSchema, getExercises } from '../services/api';
 
 const PreferencesPage = () => {
-  const { currentUser, setCurrentUser, error: globalError, clearError, setError } = useGlobalState();
+  const { currentUser, updateUser, error: globalError, clearError, setError } = useGlobalState();
 
   const [preferences, setPreferences] = useState(currentUser?.preferences || {});
   const [equipmentOptions, setEquipmentOptions] = useState([]);
@@ -45,7 +45,7 @@ const PreferencesPage = () => {
     setPreferences(updatedPreferences);
     try {
       const updatedUser = await updateUserPreferences(currentUser._id, updatedPreferences);
-      setCurrentUser(updatedUser.user);
+      updateUser(updatedUser.user);
     } catch (error) {
       setError(error.message);
     }

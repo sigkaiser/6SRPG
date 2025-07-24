@@ -8,26 +8,24 @@ const router = express.Router();
 
 // GET /api/users/data/schema
 router.get('/data/schema', (req, res) => {
-  const schemaPath = path.join(__dirname, '../data/schema.json');
-  fs.readFile(schemaPath, 'utf8', (err, data) => {
-    if (err) {
-      res.status(500).json({ error: 'Could not read schema file' });
-      return;
-    }
+  try {
+    const schemaPath = path.join(__dirname, '../data/schema.json');
+    const data = fs.readFileSync(schemaPath, 'utf8');
     res.json(JSON.parse(data));
-  });
+  } catch (err) {
+    res.status(500).json({ error: 'Could not read schema file' });
+  }
 });
 
 // GET /api/users/data/exercises
 router.get('/data/exercises', (req, res) => {
-  const exercisesPath = path.join(__dirname, '../data/exercises.json');
-  fs.readFile(exercisesPath, 'utf8', (err, data) => {
-    if (err) {
-      res.status(500).json({ error: 'Could not read exercises file' });
-      return;
-    }
+  try {
+    const exercisesPath = path.join(__dirname, '../data/exercises.json');
+    const data = fs.readFileSync(exercisesPath, 'utf8');
     res.json(JSON.parse(data));
-  });
+  } catch (err) {
+    res.status(500).json({ error: 'Could not read exercises file' });
+  }
 });
 
 // POST /api/users/register
