@@ -8,7 +8,7 @@ import SidebarLayout from '../components/SidebarLayout';
 import homeBg from '../../assets/home.png';
 
 const PreferencesPage = () => {
-  const { currentUser, setCurrentUser, setError } = useGlobalState();
+  const { currentUser, updateUser, setError } = useGlobalState();
   const [preferences, setPreferences] = useState(currentUser.preferences);
 
   const trainingGoalsOptions = [
@@ -33,7 +33,7 @@ const PreferencesPage = () => {
     setPreferences(newPreferences);
     try {
       const updatedUser = await updateUserPreferences(currentUser.id, newPreferences);
-      setCurrentUser(updatedUser.user);
+      updateUser(updatedUser.user);
     } catch (error) {
       setError(error.message);
     }
@@ -106,6 +106,7 @@ const PreferencesPage = () => {
       currentUser={currentUser}
       buttonJustify="center"
       isAuthRequired={true}
+      fontColor="black"
     />
   );
 };
