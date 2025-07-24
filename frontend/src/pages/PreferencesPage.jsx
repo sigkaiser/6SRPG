@@ -1,3 +1,4 @@
+console.log("PreferencesPage.jsx: File loaded");
 import React, { useState, useEffect, useMemo } from 'react';
 import { useGlobalState } from '../context/GlobalState';
 import SidebarLayout from '../components/SidebarLayout';
@@ -39,7 +40,7 @@ const PreferencesPage = () => {
         }
       } catch (error) {
         console.error("PreferencesPage: fetchOptions error", error);
-        setError(error.message);
+        setError(.message);
       }
     };
 
@@ -113,6 +114,7 @@ const PreferencesPage = () => {
             ></textarea>
           </div>
         </div>
+.
       </div>
     );
   };
