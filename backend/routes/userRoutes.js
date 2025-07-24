@@ -293,11 +293,7 @@ router.put('/:id/preferences', async (req, res) => {
     }
 
     const { preferences } = req.body;
-    user.preferences.trainingGoals = preferences.trainingGoals;
-    user.preferences.excludedEquipment = preferences.excludedEquipment;
-    user.preferences.excludedMuscles = preferences.excludedMuscles;
-    user.preferences.excludedExercises = preferences.excludedExercises;
-    user.preferences.customInstructions = preferences.customInstructions;
+    user.preferences = { ...user.preferences, ...preferences };
     await user.save();
 
     res.json({ message: 'Preferences updated successfully', user: user.toJSON() });

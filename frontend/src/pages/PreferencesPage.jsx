@@ -1,4 +1,3 @@
-console.log("PreferencesPage.jsx: File loaded");
 import React, { useState, useEffect, useMemo } from 'react';
 import { useGlobalState } from '../context/GlobalState';
 import SidebarLayout from '../components/SidebarLayout';
@@ -14,17 +13,12 @@ const PreferencesPage = () => {
   const [exerciseOptions, setExerciseOptions] = useState([]);
 
   useEffect(() => {
-    console.log("PreferencesPage: useEffect triggered");
     if (currentUser) {
-      console.log("PreferencesPage: currentUser exists, setting preferences");
       setPreferences(currentUser.preferences);
     }
     const fetchOptions = async () => {
       try {
-        console.log("PreferencesPage: Fetching schema and exercises");
         const [schemaRes, exercisesRes] = await Promise.all([getSchema(), getExercises()]);
-        console.log("PreferencesPage: schemaRes", schemaRes);
-        console.log("PreferencesPage: exercisesRes", exercisesRes);
 
         if (schemaRes.success) {
           setEquipmentOptions(schemaRes.data.properties.equipment.enum.filter(e => e));
@@ -39,7 +33,6 @@ const PreferencesPage = () => {
           setError(exercisesRes.message);
         }
       } catch (error) {
-        console.error("PreferencesPage: fetchOptions error", error);
         setError(error.message);
       }
     };
@@ -49,15 +42,12 @@ const PreferencesPage = () => {
 
   const handlePreferenceChange = async (field, value) => {
     if (!currentUser) return;
-    console.log(`PreferencesPage: handlePreferenceChange: ${field}`, value);
     const updatedPreferences = { ...preferences, [field]: value };
     setPreferences(updatedPreferences);
     try {
       const updatedUser = await updateUserPreferences(currentUser._id, updatedPreferences);
-      console.log("PreferencesPage: updatedUser", updatedUser);
       updateUser(updatedUser.user);
     } catch (error) {
-      console.error("PreferencesPage: handlePreferenceChange error", error);
       setError(error.message);
     }
   };
