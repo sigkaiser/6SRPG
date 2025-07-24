@@ -18,7 +18,8 @@ const PreferencesPage = () => {
     }
     const fetchOptions = async () => {
       try {
-        const schemaRes = await getSchema();
+        const [schemaRes, exercisesRes] = await Promise.all([getSchema(), getExercises()]);
+
         if (schemaRes.success) {
           setEquipmentOptions(schemaRes.data.properties.equipment.enum.filter(e => e));
           setMuscleOptions(schemaRes.data.properties.primaryMuscles.items[0].enum.filter(m => m));
@@ -26,7 +27,6 @@ const PreferencesPage = () => {
           setError(schemaRes.message);
         }
 
-        const exercisesRes = await getExercises();
         if (exercisesRes.success) {
           setExerciseOptions(exercisesRes.data.map(e => e.name));
         } else {
