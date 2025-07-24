@@ -1,112 +1,101 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
+import Select from 'react-select';
 import { useGlobalState } from '../context/GlobalState';
+import { updateUserPreferences } from '../services/api';
+import schema from '../../../backend/data/schema.json';
+import exercises from '../../../backend/data/exercises.json';
 import SidebarLayout from '../components/SidebarLayout';
 import homeBg from '../../assets/home.png';
-import { updateUserPreferences, getSchema, getExercises } from '../services/api';
 
 const PreferencesPage = () => {
-  const { currentUser, updateUser, error: globalError, clearError, setError } = useGlobalState();
+  const { currentUser, setCurrentUser, setError } = useGlobalState();
+  const [preferences, setPreferences] = useState(currentUser.preferences);
 
-  const [preferences, setPreferences] = useState(currentUser?.preferences || {});
-  const [equipmentOptions, setEquipmentOptions] = useState([]);
-  const [muscleOptions, setMuscleOptions] = useState([]);
-  const [exerciseOptions, setExerciseOptions] = useState([]);
+  const trainingGoalsOptions = [
+    { value: 'increase upper body strength', label: 'Increase upper body strength' },
+    { value: 'increase lower body strength', label: 'Increase lower body strength' },
+    { value: 'improve core strength', label: 'Improve core strength' },
+    { value: 'improve cardio endurance', label: 'Improve cardio endurance' },
+    { value: 'improve flexibility mobility', label: 'Improve flexibility mobility' },
+    { value: 'improve explosive power', label: 'Improve explosive power' },
+    { value: 'general fitness', label: 'General fitness' },
+    { value: 'weight loss', label: 'Weight loss' },
+    { value: 'muscle hypertrophy (size)', label: 'Muscle hypertrophy (size)' },
+    { value: 'active recovery / injury rehab', label: 'Active recovery / injury rehab' },
+  ];
 
-  useEffect(() => {
-    if (currentUser) {
-      setPreferences(currentUser.preferences);
-    }
-    const fetchOptions = async () => {
-      try {
-        const [schemaRes, exercisesRes] = await Promise.all([getSchema(), getExercises()]);
+  const excludedEquipmentOptions = schema.properties.equipment.enum.filter(e => e).map(e => ({ value: e, label: e }));
+  const excludedMusclesOptions = schema.properties.primaryMuscles.items[0].enum.map(m => ({ value: m, label: m }));
+  const excludedExercisesOptions = exercises.map(e => ({ value: e.name, label: e.name }));
 
-        if (schemaRes.success) {
-          setEquipmentOptions(schemaRes.data.properties.equipment.enum.filter(e => e));
-          setMuscleOptions(schemaRes.data.properties.primaryMuscles.items[0].enum.filter(m => m));
-        } else {
-          setError(schemaRes.message);
-        }
-
-        if (exercisesRes.success) {
-          setExerciseOptions(exercisesRes.data.map(e => e.name));
-        } else {
-          setError(exercisesRes.message);
-        }
-      } catch (error) {
-        setError(error.message);
-      }
-    };
-
-    fetchOptions();
-  }, [currentUser, setError]);
-
-  const handlePreferenceChange = async (field, value) => {
-    if (!currentUser) return;
-    const updatedPreferences = { ...preferences, [field]: value };
-    setPreferences(updatedPreferences);
+  const handlePreferenceChange = async (name, value) => {
+    const newPreferences = { ...preferences, [name]: value };
+    setPreferences(newPreferences);
     try {
-      const updatedUser = await updateUserPreferences(currentUser._id, updatedPreferences);
-      updateUser(updatedUser.user);
+      const updatedUser = await updateUserPreferences(currentUser.id, newPreferences);
+      setCurrentUser(updatedUser.user);
     } catch (error) {
       setError(error.message);
     }
   };
 
-  const buttons = [
-    { label: 'Return to House', to: '/home' },
-  ];
-
-  const trainingGoalOptions = useMemo(() => [
-    "Increase upper body strength", "Increase lower body strength", "Improve core strength",
-    "Improve cardio endurance", "Improve flexibility mobility", "Improve explosive power",
-    "General fitness", "Weight loss", "Muscle hypertrophy (size)", "Active recovery / injury rehab"
-  ], []);
-
   const renderContentArea = () => {
-    if (!currentUser) return <p>Loading...</p>;
-
     return (
-      <div className="p-6 bg-gray-100 text-gray-900 rounded-lg shadow-xl overflow-auto" style={{ maxHeight: '80vh' }}>
+      <div className="p-6 bg-gray-100 text-gray-900 rounded-lg shadow-xl">
         <h2 className="text-2xl font-bold mb-4 text-yellow-400">Preferences</h2>
-
         <div className="space-y-4">
-          <MultiSelectDropdown
-            label="Training Goals"
-            options={trainingGoalOptions}
-            selected={preferences.trainingGoals || []}
-            onChange={(selected) => handlePreferenceChange('trainingGoals', selected)}
-          />
-          <MultiSelectDropdown
-            label="Excluded Equipment"
-            options={equipmentOptions}
-            selected={preferences.excludedEquipment || []}
-            onChange={(selected) => handlePreferenceChange('excludedEquipment', selected)}
-          />
-          <MultiSelectDropdown
-            label="Excluded Muscles"
-            options={muscleOptions}
-            selected={preferences.excludedMuscles || []}
-            onChange={(selected) => handlePreferenceChange('excludedMuscles', selected)}
-          />
-          <MultiSelectDropdown
-            label="Excluded Exercises"
-            options={exerciseOptions}
-            selected={preferences.excludedExercises || []}
-            onChange={(selected) => handlePreferenceChange('excludedExercises', selected)}
-          />
           <div>
-            <label className="block text-lg font-medium text-gray-700">Custom Instructions</label>
+            <label className="block mb-2 font-bold">Training Goals</label>
+            <Select
+              isMulti
+              options={trainingGoalsOptions}
+              value={trainingGoalsOptions.filter(o => preferences.trainingGoals.includes(o.value))}
+              onChange={selectedOptions => handlePreferenceChange('trainingGoals', selectedOptions.map(o => o.value))}
+            />
+          </div>
+          <div>
+            <label className="block mb-2 font-bold">Excluded Equipment</label>
+            <Select
+              isMulti
+              options={excludedEquipmentOptions}
+              value={excludedEquipmentOptions.filter(o => preferences.excludedEquipment.includes(o.value))}
+              onChange={selectedOptions => handlePreferenceChange('excludedEquipment', selectedOptions.map(o => o.value))}
+            />
+          </div>
+          <div>
+            <label className="block mb-2 font-bold">Excluded Muscles</label>
+            <Select
+              isMulti
+              options={excludedMusclesOptions}
+              value={excludedMusclesOptions.filter(o => preferences.excludedMuscles.includes(o.value))}
+              onChange={selectedOptions => handlePreferenceChange('excludedMuscles', selectedOptions.map(o => o.value))}
+            />
+          </div>
+          <div>
+            <label className="block mb-2 font-bold">Excluded Exercises</label>
+            <Select
+              isMulti
+              options={excludedExercisesOptions}
+              value={excludedExercisesOptions.filter(o => preferences.excludedExercises.includes(o.value))}
+              onChange={selectedOptions => handlePreferenceChange('excludedExercises', selectedOptions.map(o => o.value))}
+            />
+          </div>
+          <div>
+            <label className="block mb-2 font-bold">Custom Instructions</label>
             <textarea
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              rows="4"
-              value={preferences.customInstructions || ''}
-              onChange={(e) => handlePreferenceChange('customInstructions', e.target.value)}
-            ></textarea>
+              className="w-full p-2 border rounded"
+              value={preferences.customInstructions}
+              onChange={e => handlePreferenceChange('customInstructions', e.target.value)}
+            />
           </div>
         </div>
       </div>
     );
   };
+
+  const buttons = [
+    { label: 'Return to House', to: '/home' },
+  ];
 
   return (
     <SidebarLayout
@@ -114,57 +103,10 @@ const PreferencesPage = () => {
       pageTitle="Preferences"
       buttons={buttons}
       renderContent={renderContentArea}
-      error={globalError}
-      clearError={clearError}
       currentUser={currentUser}
       buttonJustify="center"
       isAuthRequired={true}
     />
-  );
-};
-
-const MultiSelectDropdown = ({ label, options, selected, onChange }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const handleSelect = (option) => {
-    const newSelected = selected.includes(option)
-      ? selected.filter(item => item !== option)
-      : [...selected, option];
-    onChange(newSelected);
-  };
-
-  return (
-    <div className="relative">
-      <label className="block text-lg font-medium text-gray-700">{label}</label>
-      <button
-        type="button"
-        className="mt-1 block w-full rounded-md border border-gray-300 bg-white py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm text-left"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span className="block truncate">{selected.join(', ') || `Select ${label}...`}</span>
-      </button>
-
-      {isOpen && (
-        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-y-auto focus:outline-none sm:text-sm" style={{ backgroundColor: 'white' }}>
-          {options.map(option => (
-            <div
-              key={option}
-              className="text-gray-900 cursor-default select-none relative py-2 pl-3 pr-9 hover:bg-indigo-600"
-              onClick={() => handleSelect(option)}
-            >
-              <span className={`font-normal block truncate ${selected.includes(option) ? 'font-semibold' : ''}`}>
-                {option}
-              </span>
-              {selected.includes(option) && (
-                <span className="text-indigo-600 absolute inset-y-0 right-0 flex items-center pr-4">
-                  &#10003;
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
   );
 };
 

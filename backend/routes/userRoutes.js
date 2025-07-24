@@ -1,20 +1,8 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
-const schema = require('../data/schema.json');
-const exercises = require('../data/exercises.json');
 
 const router = express.Router();
-
-// GET /api/users/data/schema
-router.get('/data/schema', (req, res) => {
-  res.json(schema);
-});
-
-// GET /api/users/data/exercises
-router.get('/data/exercises', (req, res) => {
-  res.json(exercises);
-});
 
 // POST /api/users/register
 router.post('/register', async (req, res) => {
@@ -292,13 +280,12 @@ router.put('/:id/preferences', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const { preferences } = req.body;
-    user.preferences = { ...user.preferences, ...preferences };
+    user.preferences = { ...user.preferences, ...req.body };
     await user.save();
 
-    res.json({ message: 'Preferences updated successfully', user: user.toJSON() });
+    res.status(200).json({ message: 'Preferences updated successfully', user: user.toJSON() });
   } catch (err) {
-    res.status(500).json({ error: 'Could not update preferences' });
+    res.status(500).json({ error: 'Failed to update preferences' });
   }
 });
 
