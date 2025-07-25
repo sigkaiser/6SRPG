@@ -130,6 +130,7 @@ const PreferencesPage = () => {
       buttonJustify="center"
       isAuthRequired={true}
       fontColor="black"
+      buttonFontColor="text-yellow-400"
     />
   );
 };
