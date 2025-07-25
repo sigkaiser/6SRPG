@@ -68,7 +68,8 @@ const SidebarLayout = ({
               onClick={button.onClick}
               to={button.to}
               panel={panel}
-              fontColor={buttonFontColor || fontColor}
+              fontColorClass={buttonFontColor}
+              fontColor={fontColor}
               justify={buttonJustify}
             />
           ))}
