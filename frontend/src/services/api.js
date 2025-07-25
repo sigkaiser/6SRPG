@@ -112,3 +112,24 @@ export const recalculateUserStats = async (userId) => {
     return { success: false, message: error.message || 'A network error occurred while recalculating stats.' };
   }
 };
+
+export const updateUserPreferences = async (userId, preferences) => {
+  console.log(`Updating preferences for user ${userId}...`);
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/users/${userId}/preferences`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(preferences),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      return { success: false, message: data.message || 'Failed to update preferences.' };
+    }
+    return { success: true, ...data };
+  } catch (error) {
+    console.error('Update Preferences API error:', error);
+    return { success: false, message: error.message || 'A network error occurred while updating preferences.' };
+  }
+};

@@ -13,6 +13,7 @@ const SidebarLayout = ({
   buttonJustify = 'left',
   panel: customPanel,
   fontColor = '#d49942',
+  buttonFontColor,
   isAuthRequired = true,
 }) => {
   const panel = customPanel || defaultPanel;
@@ -67,7 +68,7 @@ const SidebarLayout = ({
               onClick={button.onClick}
               to={button.to}
               panel={panel}
-              fontColor={fontColor}
+              fontColor={button.fontColor || fontColor}
               justify={buttonJustify}
             />
           ))}
