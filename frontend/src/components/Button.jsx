@@ -8,7 +8,6 @@ const Button = ({
   to,
   panel: customPanel,
   fontColor = '#d49942',
-  fontColorClass = '',
   justify = 'left',
 }) => {
   const panel = customPanel || defaultPanel;
@@ -39,14 +38,14 @@ const Button = ({
   if (to) {
     return (
       <Link to={to} style={buttonWrapperStyle}>
-        <button style={buttonStyle} className={fontColorClass}>{label}</button>
+        <button style={buttonStyle}>{label}</button>
       </Link>
     );
   }
 
   return (
     <div style={buttonWrapperStyle}>
-      <button style={buttonStyle} onClick={onClick} className={fontColorClass}>
+      <button style={buttonStyle} onClick={onClick}>
         {label}
       </button>
     </div>

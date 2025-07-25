@@ -117,7 +117,7 @@ const PreferencesPage = () => {
   };
 
   const buttons = [
-    { label: 'Return to House', to: '/home' },
+    { label: 'Return to House', to: '/home', fontColor: '#d49942' },
   ];
 
   return (
@@ -130,7 +130,6 @@ const PreferencesPage = () => {
       buttonJustify="center"
       isAuthRequired={true}
       fontColor="black"
-      buttonFontColor="text-yellow-400"
     />
   );
 };
