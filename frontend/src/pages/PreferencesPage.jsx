@@ -11,6 +11,25 @@ const PreferencesPage = () => {
   const { currentUser, updateUser, setError } = useGlobalState();
   const [preferences, setPreferences] = useState(currentUser.preferences);
 
+  const customStyles = {
+    option: (provided) => ({
+      ...provided,
+      color: 'black'
+    }),
+    singleValue: (provided) => ({
+      ...provided,
+      color: 'black'
+    }),
+    multiValue: (provided) => ({
+      ...provided,
+      color: 'black'
+    }),
+    input: (provided) => ({
+      ...provided,
+      color: 'black'
+    }),
+  };
+
   const trainingGoalsOptions = [
     { value: 'increase upper body strength', label: 'Increase upper body strength' },
     { value: 'increase lower body strength', label: 'Increase lower body strength' },
@@ -48,6 +67,7 @@ const PreferencesPage = () => {
             <label className="block mb-2 font-bold">Training Goals</label>
             <Select
               isMulti
+              styles={customStyles}
               options={trainingGoalsOptions}
               value={trainingGoalsOptions.filter(o => preferences.trainingGoals.includes(o.value))}
               onChange={selectedOptions => handlePreferenceChange('trainingGoals', selectedOptions.map(o => o.value))}
@@ -57,6 +77,7 @@ const PreferencesPage = () => {
             <label className="block mb-2 font-bold">Excluded Equipment</label>
             <Select
               isMulti
+              styles={customStyles}
               options={excludedEquipmentOptions}
               value={excludedEquipmentOptions.filter(o => preferences.excludedEquipment.includes(o.value))}
               onChange={selectedOptions => handlePreferenceChange('excludedEquipment', selectedOptions.map(o => o.value))}
@@ -66,6 +87,7 @@ const PreferencesPage = () => {
             <label className="block mb-2 font-bold">Excluded Muscles</label>
             <Select
               isMulti
+              styles={customStyles}
               options={excludedMusclesOptions}
               value={excludedMusclesOptions.filter(o => preferences.excludedMuscles.includes(o.value))}
               onChange={selectedOptions => handlePreferenceChange('excludedMuscles', selectedOptions.map(o => o.value))}
@@ -75,6 +97,7 @@ const PreferencesPage = () => {
             <label className="block mb-2 font-bold">Excluded Exercises</label>
             <Select
               isMulti
+              styles={customStyles}
               options={excludedExercisesOptions}
               value={excludedExercisesOptions.filter(o => preferences.excludedExercises.includes(o.value))}
               onChange={selectedOptions => handlePreferenceChange('excludedExercises', selectedOptions.map(o => o.value))}
