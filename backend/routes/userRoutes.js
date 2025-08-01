@@ -45,6 +45,7 @@ router.post('/login', async (req, res) => {
 
 // GET /api/users/:id
 router.get('/:id', async (req, res) => {
+  console.log(`Fetching data for user ${req.params.id}...`);
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -53,6 +54,23 @@ router.get('/:id', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Could not fetch user data' });
   }
+});
+
+const generatePersonalDailyQuests = require('../services/generatePersonalDailyQuests');
+
+// Route to generate daily quests for a user
+router.post('/:userId/daily-quests', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const quests = await generatePersonalDailyQuests(user);
+        res.status(201).json(quests);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 });
 
 // --- Stat Calculation Service and User Model ---
