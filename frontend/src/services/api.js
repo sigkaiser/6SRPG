@@ -151,8 +151,12 @@ export const getDailyQuests = async (userId) => {
 };
 
 export const generateDailyQuests = async (userId) => {
+  console.log(`--- api.js: generateDailyQuests called with userId: ${userId} ---`);
+  const url = `${API_BASE_URL}/api/users/${userId}/daily-quests`;
+  console.log(`Fetching URL: ${url}`);
+
   try {
-    const response = await fetch(`${API_BASE_URL}/api/users/${userId}/daily-quests`, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

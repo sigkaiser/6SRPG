@@ -19,15 +19,21 @@ const QuestBoard = () => {
   }, [currentUser]);
 
   const handleGenerateQuests = async () => {
-    console.log('handleGenerateQuests called');
+    console.log('--- handleGenerateQuests called ---');
+    console.log('Current user object:', currentUser);
+
     if (!currentUser || !currentUser._id) {
-      console.log('No current user or user ID');
+      console.error('CRITICAL: No current user or user ID found. Aborting quest generation.');
       return;
     }
-    console.log('Generating quests for user:', currentUser._id);
+
+    console.log(`Attempting to generate quests for user ID: ${currentUser._id}`);
     clearError();
+
+    console.log('Calling generateDailyQuests from api.js...');
     const response = await generateDailyQuests(currentUser._id);
-    console.log('Response from generateDailyQuests:', response);
+    console.log('Response received from generateDailyQuests in api.js:', response);
+
     if (response.success) {
       getDailyQuests(currentUser._id); // Refetch quests after generating new ones
     } else {
