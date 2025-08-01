@@ -41,6 +41,31 @@ const ItemSchema = new Schema({
   equipped: { type: Boolean, default: false }
 });
 
+const DailyQuestSchema = new Schema({
+  questId: { type: String, required: true },
+  title: { type: String, required: true },
+  rank: { type: String, enum: ["G", "F", "E", "D", "C", "B", "A", "S"], required: true },
+  description: { type: String, required: true },
+  primaryStat: { type: String, enum: ["upperBodyStrength", "lowerBodyStrength", "coreStrength", "cardioEndurance", "flexibilityMobility", "powerExplosiveness"], required: true },
+  exercises: [{
+    name: { type: String, required: true },
+    sets: { type: Number, required: true },
+    reps: { type: Number },
+    duration: { type: Number },
+    weightPercent: { type: Number }
+  }],
+  createdAt: { type: Date, default: Date.now },
+  expiresAt: { type: Date, required: true },
+  status: { type: String, enum: ["available", "accepted", "completed", "abandoned", "expired"], default: "available" },
+  userLoggedExercises: [{
+    name: { type: String, required: true },
+    sets: { type: Number, required: true },
+    reps: { type: Number },
+    duration: { type: Number },
+    weight: { type: Number }
+  }]
+});
+
 // Main User Schema
 
 const UserSchema = new Schema({
@@ -99,6 +124,7 @@ const UserSchema = new Schema({
   levelProgress: [LevelProgressSchema],
   completedQuests: [QuestSchema],
   activeQuests: [QuestSchema],
+  dailyQuests: [DailyQuestSchema],
 
   // 3. Exercise History
   exerciseHistory: [ExerciseSchema],
