@@ -10,6 +10,9 @@ const openai = new OpenAI({
 });
 
 const generatePersonalDailyQuests = async (user) => {
+  console.log('--- Generating Personal Daily Quests ---');
+  console.log('User:', JSON.stringify(user, null, 2));
+
   // 1. Gather user data
   const { preferences, exerciseHistory, stats } = user;
   const {
@@ -40,7 +43,7 @@ const generatePersonalDailyQuests = async (user) => {
     - Recent Exercise History (last 30 days): ${JSON.stringify(recentExerciseHistory, null, 2)}
     - Current Stat Levels: ${JSON.stringify(stats, null, 2)}
 
-    Please return the quests in a valid JSON array format. Each quest object in the array must include:
+    Please return the quests in a valid JSON array format, under a "quests" key. Each quest object in the array must include:
     - title: A creative and engaging title for the quest (e.g., "The Gauntlet of Strength", "Serpent's Stretch").
     - rank: A difficulty rank from "G" (easiest) to "S" (hardest).
     - description: Flavorful text that makes the workout sound like an epic adventure.
@@ -54,6 +57,8 @@ const generatePersonalDailyQuests = async (user) => {
 
     Ensure the generated JSON is valid and follows the specified structure. Do not include any extra text or explanations outside of the JSON array.
   `;
+  console.log('--- Prompt for OpenAI ---');
+  console.log(prompt);
 
   try {
     // 3. Send the prompt to GPT-4
@@ -63,12 +68,19 @@ const generatePersonalDailyQuests = async (user) => {
       response_format: { type: "json_object" },
     });
 
+    console.log('--- Raw Response from OpenAI ---');
+    console.log(JSON.stringify(response, null, 2));
+
     const quests = JSON.parse(response.choices[0].message.content).quests;
 
     // 4. Parse and validate the LLM response
     if (!quests || !Array.isArray(quests)) {
+      console.error('Invalid response from OpenAI: "quests" array not found or not an array.');
       throw new Error('Invalid response from OpenAI');
     }
+
+    console.log('--- Parsed Quests ---');
+    console.log(JSON.stringify(quests, null, 2));
 
     const validatedQuests = [];
 
@@ -101,8 +113,10 @@ const generatePersonalDailyQuests = async (user) => {
               confidenceScore: results[0].score,
             });
             await exerciseAlias.save();
+            console.log(`Exercise alias saved: ${exercise.name} -> ${matchedExercise.name}`);
           } else {
             questIsValid = false;
+            console.log(`No confident match for exercise: ${exercise.name}. Discarding quest: "${quest.title}"`);
             break; // Discard the whole quest if one exercise doesn't match
           }
         }
@@ -124,11 +138,15 @@ const generatePersonalDailyQuests = async (user) => {
       }
     }
 
+    console.log('--- Validated Quests ---');
+    console.log(JSON.stringify(validatedQuests, null, 2));
+
     // 8. Save quests to user
     const now = new Date();
     user.dailyQuests = user.dailyQuests.filter(quest => quest.expiresAt > now);
     user.dailyQuests.push(...validatedQuests);
     await user.save();
+    console.log('--- Quests saved to user ---');
 
     return validatedQuests;
 
