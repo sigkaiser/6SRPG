@@ -24,6 +24,9 @@ const CLEAR_ERROR = 'CLEAR_ERROR';
 const RECALCULATE_STATS_START = 'RECALCULATE_STATS_START'; // Added
 const RECALCULATE_STATS_SUCCESS = 'RECALCULATE_STATS_SUCCESS'; // Added
 const RECALCULATE_STATS_FAIL = 'RECALCULATE_STATS_FAIL'; // Added
+const GET_DAILY_QUESTS_START = 'GET_DAILY_QUESTS_START';
+const GET_DAILY_QUESTS_SUCCESS = 'GET_DAILY_QUESTS_SUCCESS';
+const GET_DAILY_QUESTS_FAIL = 'GET_DAILY_QUESTS_FAIL';
 
 // Reducer
 function globalReducer(state, action) {
@@ -57,6 +60,12 @@ function globalReducer(state, action) {
       };
     case RECALCULATE_STATS_FAIL: // Added
       return { ...state, isLoadingStats: false, error: action.payload };
+    case GET_DAILY_QUESTS_START:
+      return { ...state, isLoading: true, error: null };
+    case GET_DAILY_QUESTS_SUCCESS:
+      return { ...state, currentUser: action.payload, isLoading: false, error: null };
+    case GET_DAILY_QUESTS_FAIL:
+      return { ...state, isLoading: false, error: action.payload };
     default:
       return state;
   }
@@ -130,6 +139,26 @@ export const GlobalStateProvider = ({ children }) => {
     }
   }, []);
 
+  const getDailyQuests = useCallback(async (userId) => {
+    if (!userId) {
+      console.error("getDailyQuests: userId is undefined.");
+      dispatch({ type: GET_DAILY_QUESTS_FAIL, payload: "User ID not provided for fetching quests." });
+      return;
+    }
+    dispatch({ type: GET_DAILY_QUESTS_START });
+    try {
+      const result = await getDailyQuests(userId);
+      if (result.success) {
+        dispatch({ type: GET_DAILY_QUESTS_SUCCESS, payload: result.user });
+      } else {
+        throw new Error(result.message || 'Failed to fetch daily quests.');
+      }
+    } catch (error) {
+      console.error('Error fetching daily quests in GlobalState:', error);
+      dispatch({ type: GET_DAILY_QUESTS_FAIL, payload: error.message });
+    }
+  }, []);
+
 
   const setError = useCallback((errorMessage) => {
     dispatch({ type: SET_ERROR, payload: errorMessage });
@@ -173,6 +202,7 @@ export const GlobalStateProvider = ({ children }) => {
         updateUser,
         loadExercises,
         recalculateStats,
+        getDailyQuests,
         setError,
         clearError,
       }}

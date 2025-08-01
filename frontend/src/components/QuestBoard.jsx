@@ -1,30 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useGlobalState } from '../context/GlobalState';
-import { getDailyQuests, generateDailyQuests } from '../services/api';
+import { generateDailyQuests } from '../services/api';
 
 const QuestBoard = () => {
-  const { currentUser, error, setError, clearError } = useGlobalState();
+  const { currentUser, error, isLoading, getDailyQuests, setError, clearError } = useGlobalState();
   const [quests, setQuests] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (currentUser && currentUser._id) {
-      fetchQuests();
+      getDailyQuests(currentUser._id);
+    }
+  }, [currentUser, getDailyQuests]);
+
+  useEffect(() => {
+    if (currentUser && currentUser.dailyQuests) {
+      setQuests(currentUser.dailyQuests);
     }
   }, [currentUser]);
-
-  const fetchQuests = async () => {
-    if (!currentUser || !currentUser._id) return;
-    setIsLoading(true);
-    clearError();
-    const response = await getDailyQuests(currentUser._id);
-    if (response.success) {
-      setQuests(response.quests);
-    } else {
-      setError(response.message);
-    }
-    setIsLoading(false);
-  };
 
   const handleGenerateQuests = async () => {
     console.log('handleGenerateQuests called');
@@ -33,16 +25,14 @@ const QuestBoard = () => {
       return;
     }
     console.log('Generating quests for user:', currentUser._id);
-    setIsLoading(true);
     clearError();
     const response = await generateDailyQuests(currentUser._id);
     console.log('Response from generateDailyQuests:', response);
     if (response.success) {
-      fetchQuests(); // Refetch quests after generating new ones
+      getDailyQuests(currentUser._id); // Refetch quests after generating new ones
     } else {
       setError(response.message);
     }
-    setIsLoading(false);
   };
 
   if (isLoading) {
