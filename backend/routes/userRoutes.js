@@ -45,6 +45,7 @@ router.post('/login', async (req, res) => {
 
 // GET /api/users/:id
 router.get('/:id', async (req, res) => {
+  console.log(`Fetching data for user ${req.params.id}...`);
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ error: 'User not found' });

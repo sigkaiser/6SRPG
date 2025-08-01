@@ -135,14 +135,17 @@ export const updateUserPreferences = async (userId, preferences) => {
 };
 
 export const getDailyQuests = async (userId) => {
+  console.log(`Fetching daily quests for user ${userId}...`);
   try {
     const response = await fetch(`${API_BASE_URL}/api/users/${userId}`);
     const data = await response.json();
+    console.log('Response from getDailyQuests:', data);
     if (!response.ok) {
       return { success: false, message: data.message || 'Failed to fetch daily quests.' };
     }
     return { success: true, quests: data.dailyQuests };
   } catch (error) {
+    console.error('Fetch Daily Quests API error:', error);
     return { success: false, message: error.message || 'A network error occurred while fetching daily quests.' };
   }
 };
