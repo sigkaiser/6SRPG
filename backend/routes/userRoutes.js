@@ -55,6 +55,23 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+const generatePersonalDailyQuests = require('../services/generatePersonalDailyQuests');
+
+// Route to generate daily quests for a user
+router.post('/:userId/daily-quests', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const quests = await generatePersonalDailyQuests(user);
+        res.status(201).json(quests);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // --- Stat Calculation Service and User Model ---
 // Ensure User model is already required at the top if not (it is in this file)
 const statCalculationService = require('../services/statCalculationService');

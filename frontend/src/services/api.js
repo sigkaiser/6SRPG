@@ -133,3 +133,34 @@ export const updateUserPreferences = async (userId, preferences) => {
     return { success: false, message: error.message || 'A network error occurred while updating preferences.' };
   }
 };
+
+export const getDailyQuests = async (userId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/users/${userId}`);
+    const data = await response.json();
+    if (!response.ok) {
+      return { success: false, message: data.message || 'Failed to fetch daily quests.' };
+    }
+    return { success: true, quests: data.dailyQuests };
+  } catch (error) {
+    return { success: false, message: error.message || 'A network error occurred while fetching daily quests.' };
+  }
+};
+
+export const generateDailyQuests = async (userId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/users/${userId}/daily-quests`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      return { success: false, message: data.message || 'Failed to generate daily quests.' };
+    }
+    return { success: true, ...data };
+  } catch (error) {
+    return { success: false, message: error.message || 'A network error occurred while generating daily quests.' };
+  }
+};
