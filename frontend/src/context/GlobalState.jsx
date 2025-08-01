@@ -71,6 +71,7 @@ export const GlobalStateProvider = ({ children }) => {
 
   // Actions
   const loginUser = useCallback((userData) => {
+    localStorage.setItem('currentUser', JSON.stringify(userData));
     dispatch({ type: LOGIN_SUCCESS, payload: userData });
   }, []);
 
@@ -136,6 +137,14 @@ export const GlobalStateProvider = ({ children }) => {
 
   const clearError = useCallback(() => {
     dispatch({ type: CLEAR_ERROR });
+  }, []);
+
+  // Load user from local storage on initial mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      dispatch({ type: LOGIN_SUCCESS, payload: JSON.parse(storedUser) });
+    }
   }, []);
 
   // Load exercises on initial mount
