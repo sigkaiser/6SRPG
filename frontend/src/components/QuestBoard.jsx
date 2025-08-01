@@ -8,12 +8,13 @@ const QuestBoard = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && currentUser._id) {
       fetchQuests();
     }
   }, [currentUser]);
 
   const fetchQuests = async () => {
+    if (!currentUser || !currentUser._id) return;
     setIsLoading(true);
     clearError();
     const response = await getDailyQuests(currentUser._id);
@@ -26,6 +27,7 @@ const QuestBoard = () => {
   };
 
   const handleGenerateQuests = async () => {
+    if (!currentUser || !currentUser._id) return;
     setIsLoading(true);
     clearError();
     const response = await generateDailyQuests(currentUser._id);
