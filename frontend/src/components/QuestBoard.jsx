@@ -27,10 +27,16 @@ const QuestBoard = () => {
   };
 
   const handleGenerateQuests = async () => {
-    if (!currentUser || !currentUser._id) return;
+    console.log('handleGenerateQuests called');
+    if (!currentUser || !currentUser._id) {
+      console.log('No current user or user ID');
+      return;
+    }
+    console.log('Generating quests for user:', currentUser._id);
     setIsLoading(true);
     clearError();
     const response = await generateDailyQuests(currentUser._id);
+    console.log('Response from generateDailyQuests:', response);
     if (response.success) {
       fetchQuests(); // Refetch quests after generating new ones
     } else {
