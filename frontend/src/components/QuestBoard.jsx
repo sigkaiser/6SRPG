@@ -7,10 +7,11 @@ const QuestBoard = () => {
   const [quests, setQuests] = useState([]);
 
   useEffect(() => {
+    // Only run this effect if the user's ID changes.
     if (currentUser && currentUser.id) {
       getDailyQuests(currentUser.id);
     }
-  }, [currentUser, getDailyQuests]);
+  }, [currentUser?.id, getDailyQuests]);
 
   useEffect(() => {
     if (currentUser && currentUser.dailyQuests) {
