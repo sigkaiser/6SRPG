@@ -152,10 +152,8 @@ export const GlobalStateProvider = ({ children }) => {
     try {
       const result = await apiGetDailyQuests(userId);
       if (result.success) {
-        // The API returns quests on a 'quests' property, not a 'user' property.
-        // We need to update the user in the context with these new quests.
-        const updatedUser = { ...state.currentUser, dailyQuests: result.quests };
-        dispatch({ type: GET_DAILY_QUESTS_SUCCESS, payload: updatedUser });
+        // The API now returns the full user object.
+        dispatch({ type: GET_DAILY_QUESTS_SUCCESS, payload: result.user });
       } else {
         throw new Error(result.message || 'Failed to fetch daily quests.');
       }

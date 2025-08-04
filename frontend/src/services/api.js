@@ -143,7 +143,8 @@ export const getDailyQuests = async (userId) => {
     if (!response.ok) {
       return { success: false, message: data.message || 'Failed to fetch daily quests.' };
     }
-    return { success: true, quests: data.dailyQuests };
+    // Return the full user object
+    return { success: true, user: data };
   } catch (error) {
     console.error('Fetch Daily Quests API error:', error);
     return { success: false, message: error.message || 'A network error occurred while fetching daily quests.' };
