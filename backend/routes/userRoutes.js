@@ -66,8 +66,10 @@ router.post('/:userId/daily-quests', async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const quests = await generatePersonalDailyQuests(user);
-        res.status(201).json(quests);
+        await generatePersonalDailyQuests(user);
+        // After generating, find the user again to get the updated document
+        const updatedUser = await User.findById(req.params.userId);
+        res.status(201).json(updatedUser.toJSON());
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
