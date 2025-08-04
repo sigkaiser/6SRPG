@@ -1,13 +1,15 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors'); // Import cors package
+const cors = require('cors');
+const morgan = require('morgan'); // Import morgan
 const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
 // Middleware
-app.use(cors()); // Enable CORS for all routes
+app.use(cors());
+app.use(morgan('dev')); // Use morgan for logging
 app.use(express.json());
 
 // Routes

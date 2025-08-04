@@ -1,7 +1,10 @@
 import React, { createContext, useReducer, useContext, useEffect, useCallback } from 'react';
 
 // Initial state
-import { recalculateUserStats as apiRecalculateUserStats } from '../services/api'; // Added import
+import {
+  recalculateUserStats as apiRecalculateUserStats,
+  getDailyQuests as apiGetDailyQuests
+} from '../services/api';
 
 const initialState = {
   currentUser: null,
@@ -147,8 +150,9 @@ export const GlobalStateProvider = ({ children }) => {
     }
     dispatch({ type: GET_DAILY_QUESTS_START });
     try {
-      const result = await getDailyQuests(userId);
+      const result = await apiGetDailyQuests(userId);
       if (result.success) {
+        // The API now returns the full user object.
         dispatch({ type: GET_DAILY_QUESTS_SUCCESS, payload: result.user });
       } else {
         throw new Error(result.message || 'Failed to fetch daily quests.');

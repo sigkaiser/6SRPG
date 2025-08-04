@@ -143,7 +143,8 @@ export const getDailyQuests = async (userId) => {
     if (!response.ok) {
       return { success: false, message: data.message || 'Failed to fetch daily quests.' };
     }
-    return { success: true, quests: data.dailyQuests };
+    // Return the full user object
+    return { success: true, user: data };
   } catch (error) {
     console.error('Fetch Daily Quests API error:', error);
     return { success: false, message: error.message || 'A network error occurred while fetching daily quests.' };
@@ -151,8 +152,12 @@ export const getDailyQuests = async (userId) => {
 };
 
 export const generateDailyQuests = async (userId) => {
+  console.log(`--- api.js: generateDailyQuests called with userId: ${userId} ---`);
+  const url = `${API_BASE_URL}/api/users/${userId}/daily-quests`;
+  console.log(`Fetching URL: ${url}`);
+
   try {
-    const response = await fetch(`${API_BASE_URL}/api/users/${userId}/daily-quests`, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

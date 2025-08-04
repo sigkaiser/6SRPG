@@ -7,10 +7,11 @@ const QuestBoard = () => {
   const [quests, setQuests] = useState([]);
 
   useEffect(() => {
-    if (currentUser && currentUser._id) {
-      getDailyQuests(currentUser._id);
+    // Only run this effect if the user's ID changes.
+    if (currentUser && currentUser.id) {
+      getDailyQuests(currentUser.id);
     }
-  }, [currentUser, getDailyQuests]);
+  }, [currentUser?.id, getDailyQuests]);
 
   useEffect(() => {
     if (currentUser && currentUser.dailyQuests) {
@@ -19,17 +20,23 @@ const QuestBoard = () => {
   }, [currentUser]);
 
   const handleGenerateQuests = async () => {
-    console.log('handleGenerateQuests called');
-    if (!currentUser || !currentUser._id) {
-      console.log('No current user or user ID');
+    console.log('--- handleGenerateQuests called ---');
+    console.log('Current user object:', currentUser);
+
+    if (!currentUser || !currentUser.id) {
+      console.error('CRITICAL: No current user or user ID found. Aborting quest generation.');
       return;
     }
-    console.log('Generating quests for user:', currentUser._id);
+
+    console.log(`Attempting to generate quests for user ID: ${currentUser.id}`);
     clearError();
-    const response = await generateDailyQuests(currentUser._id);
-    console.log('Response from generateDailyQuests:', response);
+
+    console.log('Calling generateDailyQuests from api.js...');
+    const response = await generateDailyQuests(currentUser.id);
+    console.log('Response received from generateDailyQuests in api.js:', response);
+
     if (response.success) {
-      getDailyQuests(currentUser._id); // Refetch quests after generating new ones
+      getDailyQuests(currentUser.id); // Refetch quests after generating new ones
     } else {
       setError(response.message);
     }

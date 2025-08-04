@@ -5,12 +5,17 @@ const User = require('../models/User');
 const ExerciseAlias = require('../models/ExerciseAlias');
 const exercises = require('../data/exercises.json');
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 const generatePersonalDailyQuests = async (user) => {
   console.log('--- Generating Personal Daily Quests ---');
+
+  if (!process.env.OPENAI_API_KEY) {
+    console.error('OPENAI_API_KEY is not set. Cannot generate quests.');
+    throw new Error('OPENAI_API_KEY is not set. Cannot generate quests.');
+  }
+
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
   console.log('User:', JSON.stringify(user, null, 2));
 
   // 1. Gather user data
