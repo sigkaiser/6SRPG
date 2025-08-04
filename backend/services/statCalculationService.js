@@ -183,15 +183,6 @@ async function calculatePotentialStats(userExerciseHistory, exerciseDbData, stat
             }
         }
 
-        // Difficulty (Level) - contributes to potential stat calculation
-        if (lift.level && statWeights.difficulty?.[lift.level.toLowerCase()]) {
-            for (const [statName, weight] of Object.entries(statWeights.difficulty[lift.level.toLowerCase()])) {
-                if (TRACKED_STATS.includes(statName)) {
-                    liftStatContributions[statName] = (liftStatContributions[statName] || 0) + weight;
-                }
-            }
-        }
-
         // Other categories: Force, Mechanic, Equipment
         const otherMetadataCategories = ['force', 'mechanic', 'equipment'];
         for (const categoryKey of otherMetadataCategories) { // e.g. categoryKey is 'force'
@@ -205,9 +196,10 @@ async function calculatePotentialStats(userExerciseHistory, exerciseDbData, stat
             }
         }
 
+        const difficultyMultiplier = getDifficultyMultiplier(lift);
         for (const [statName, contributionWeight] of Object.entries(liftStatContributions)) {
             if (rawStats.hasOwnProperty(statName)) {
-                const points = lift.oneRm * contributionWeight;
+                const points = lift.oneRm * contributionWeight * difficultyMultiplier;
                 rawStats[statName] += points;
 
                 if (!detailedContributions[statName]) {

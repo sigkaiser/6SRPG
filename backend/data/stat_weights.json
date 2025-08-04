@@ -80,14 +80,12 @@
       "flexibilityMobility": 0.4
     },
     "pull": {
-      "upperBodyStrength": 0.5,
-      "coreStrength": 0.1,
-      "powerExplosiveness": 0.2
+      "coreStrength": 0.2,
+      "powerExplosiveness": 0.4
     },
     "push": {
-      "upperBodyStrength": 0.5,
-      "lowerBodyStrength": 0.2,
-      "powerExplosiveness": 0.3
+      "coreStrength": 0.2,
+      "powerExplosiveness": 0.4
     }
   },
   "difficulty": {
