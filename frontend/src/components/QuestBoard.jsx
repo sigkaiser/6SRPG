@@ -36,7 +36,7 @@ const QuestBoard = () => {
     console.log('Response received from generateDailyQuests in api.js:', response);
 
     if (response.success) {
-      getDailyQuests(currentUser._id); // Refetch quests after generating new ones
+      getDailyQuests(currentUser.id); // Refetch quests after generating new ones
     } else {
       setError(response.message);
     }
