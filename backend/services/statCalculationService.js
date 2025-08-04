@@ -69,8 +69,6 @@ function isExerciseRelevantForStat(exerciseInfo, camelCaseStatName, statWeights)
     if (exerciseInfo.mechanic && statWeights.mechanic?.[exerciseInfo.mechanic.toLowerCase()]?.[camelCaseStatName]) return true;
     // Check equipment
     if (exerciseInfo.equipment && statWeights.equipment?.[exerciseInfo.equipment.toLowerCase()]?.[camelCaseStatName]) return true;
-    // Check difficulty (level) - as per existing logic for potential stat calculation
-    if (exerciseInfo.level && statWeights.difficulty?.[exerciseInfo.level.toLowerCase()]?.[camelCaseStatName]) return true;
 
     return false;
 }
