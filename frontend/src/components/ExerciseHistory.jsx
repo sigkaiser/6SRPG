@@ -2,7 +2,7 @@ import React from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import { useGlobalState } from '../context/GlobalState';
 
-import pageBackground from '../assets/page.png';
+import pageBackground from '/assets/page.png';
 
 const Page = React.forwardRef((props, ref) => {
     return (
