@@ -2,13 +2,23 @@ import React from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import { useGlobalState } from '../context/GlobalState';
 
+import pageBackground from '../assets/page.png';
+
 const Page = React.forwardRef((props, ref) => {
     return (
-        <div className="page" ref={ref} style={{ backgroundColor: '#f3e9d8', border: '1px solid #c9b49a', padding: '20px' }}>
+        <div
+            className="page"
+            ref={ref}
+            style={{
+                backgroundImage: `url(${pageBackground})`,
+                backgroundSize: 'cover',
+                border: '1px solid #c9b49a',
+                padding: '20px'
+            }}
+        >
             <div className="page-content">
-                <h2 className="page-header">Page {props.number}</h2>
                 <div className="page-text">{props.children}</div>
-                <div className="page-footer">{props.number}</div>
+                <div className="page-footer" style={{textAlign: 'center', paddingTop: '10px'}}>{props.number}</div>
             </div>
         </div>
     );
@@ -30,29 +40,31 @@ const ExerciseHistory = () => {
     const sortedHistory = [...exerciseHistory].sort((a, b) => (b.date ? new Date(b.date) : 0) - (a.date ? new Date(a.date) : 0));
 
     return (
-        <div className="w-full max-w-xl p-1 flex justify-center">
-            <HTMLFlipBook width={500} height={600} showCover={true}>
+        <div className="w-full max-w-sm p-1 flex justify-center">
+            <HTMLFlipBook width={300} height={500} size="stretch" usePortrait={true}>
                 <div className="page" style={{ backgroundColor: '#a56a2a', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '2rem', fontWeight: 'bold' }}>
                     Exercise Log
                 </div>
-                {sortedHistory.map((entry, index) => (
-                    <Page key={entry._id || index} number={index + 1}>
-                        <div className="bg-gray-700 p-3 rounded-md shadow text-sm">
-                            <p className="font-semibold text-yellow-300">
-                                {entry.type || 'N/A'} - {entry.date ? new Date(entry.date).toLocaleDateString() : 'N/A'}
-                            </p>
-                            <div className="pl-4">
-                                {entry.category === 'Lift' && entry.sets && entry.sets.map((set, sIndex) => (
-                                    <p key={sIndex}>Set {sIndex + 1}: {set.reps} reps at {set.weight} lbs</p>
-                                ))}
-                                {entry.category === 'Stretch' && entry.sets && entry.sets.map((set, sIndex) => (
-                                    <p key={sIndex}>Set {sIndex + 1}: {set.duration} seconds</p>
-                                ))}
-                                {entry.category === 'Cardio' && (
-                                    <p>Duration: {entry.duration} minutes {entry.intensity ? `at intensity ${entry.intensity}` : ''}</p>
-                                )}
+                {Array.from({ length: Math.ceil(sortedHistory.length / 3) }).map((_, pageIndex) => (
+                    <Page key={pageIndex} number={pageIndex + 1}>
+                        {sortedHistory.slice(pageIndex * 3, pageIndex * 3 + 3).map((entry, entryIndex) => (
+                            <div key={entry._id || entryIndex} className="p-1 rounded-md shadow text-xs mb-2">
+                                <p className="font-semibold text-yellow-800">
+                                    {entry.type || 'N/A'} - {entry.date ? new Date(entry.date).toLocaleDateString() : 'N/A'}
+                                </p>
+                                <div className="pl-2">
+                                    {entry.category === 'Lift' && entry.sets && entry.sets.map((set, sIndex) => (
+                                        <p key={sIndex}>Set {sIndex + 1}: {set.reps} reps at {set.weight} lbs</p>
+                                    ))}
+                                    {entry.category === 'Stretch' && entry.sets && entry.sets.map((set, sIndex) => (
+                                        <p key={sIndex}>Set {sIndex + 1}: {set.duration} seconds</p>
+                                    ))}
+                                    {entry.category === 'Cardio' && (
+                                        <p>Duration: {entry.duration} minutes {entry.intensity ? `at intensity ${entry.intensity}` : ''}</p>
+                                    )}
+                                </div>
                             </div>
-                        </div>
+                        ))}
                     </Page>
                 ))}
                 <div className="page" style={{ backgroundColor: '#a56a2a', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '2rem', fontWeight: 'bold' }}>
