@@ -2,15 +2,13 @@ import React from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import { useGlobalState } from '../context/GlobalState';
 
-import pageBackground from '/assets/page.png';
-
 const Page = React.forwardRef((props, ref) => {
     return (
         <div
             className="page"
             ref={ref}
             style={{
-                backgroundImage: `url(${pageBackground})`,
+                backgroundImage: `url(/assets/page.png)`,
                 backgroundSize: 'cover',
                 border: '1px solid #c9b49a',
                 padding: '20px'
@@ -41,7 +39,7 @@ const ExerciseHistory = () => {
 
     return (
         <div className="w-full max-w-sm p-1 flex justify-center">
-            <HTMLFlipBook width={300} height={500} size="stretch" usePortrait={true}>
+            <HTMLFlipBook width={400} height={600} showCover={false}>
                 <div className="page" style={{ backgroundColor: '#a56a2a', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '2rem', fontWeight: 'bold' }}>
                     Exercise Log
                 </div>
