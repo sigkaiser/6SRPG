@@ -80,40 +80,12 @@
       "flexibilityMobility": 0.4
     },
     "pull": {
-      "upperBodyStrength": 0.5,
-      "coreStrength": 0.1,
-      "powerExplosiveness": 0.2
+      "coreStrength": 0.2,
+      "powerExplosiveness": 0.4
     },
     "push": {
-      "upperBodyStrength": 0.5,
-      "lowerBodyStrength": 0.2,
-      "powerExplosiveness": 0.3
-    }
-  },
-  "difficulty": {
-    "beginner": {
-      "upperBodyStrength": 0.3,
-      "lowerBodyStrength": 0.3,
-      "coreStrength": 0.3,
-      "powerExplosiveness": 0.1,
-      "cardioEndurance": 0.2,
-      "flexibilityMobility": 0.3
-    },
-    "intermediate": {
-      "upperBodyStrength": 0.5,
-      "lowerBodyStrength": 0.5,
-      "coreStrength": 0.4,
-      "powerExplosiveness": 0.3,
-      "cardioEndurance": 0.4,
-      "flexibilityMobility": 0.4
-    },
-    "expert": {
-      "upperBodyStrength": 0.7,
-      "lowerBodyStrength": 0.7,
-      "coreStrength": 0.5,
-      "powerExplosiveness": 0.5,
-      "cardioEndurance": 0.5,
-      "flexibilityMobility": 0.5
+      "coreStrength": 0.2,
+      "powerExplosiveness": 0.4
     }
   },
   "mechanic": {
