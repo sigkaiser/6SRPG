@@ -92,6 +92,7 @@ export const GlobalStateProvider = ({ children }) => {
   }, []);
 
   const updateUser = useCallback((userData) => {
+    localStorage.setItem('currentUser', JSON.stringify(userData));
     dispatch({ type: UPDATE_USER, payload: userData });
   }, []);
 
@@ -172,6 +173,32 @@ export const GlobalStateProvider = ({ children }) => {
     dispatch({ type: CLEAR_ERROR });
   }, []);
 
+  const devLogin = useCallback(() => {
+    const mockUser = {
+      _id: 'dev-user-id',
+      username: 'DevUser',
+      email: 'dev@test.com',
+      stats: {
+        strength: 10,
+        endurance: 10,
+        dexterity: 10,
+      },
+      exerciseHistory: [
+        { _id: 'hist1', type: 'Running', category: 'Cardio', duration: 30, intensity: 'moderate', date: new Date('2023-10-01T10:00:00Z') },
+        { _id: 'hist2', type: 'Bench Press', category: 'Lift', sets: [{ reps: 5, weight: 100 }, { reps: 5, weight: 100 }], date: new Date('2023-10-02T11:00:00Z') },
+        { _id: 'hist3', type: 'Yoga', category: 'Stretch', sets: [{ duration: 600 }], date: new Date('2023-10-03T12:00:00Z') },
+        { _id: 'hist4', type: 'Squats', category: 'Lift', sets: [{ reps: 8, weight: 150 }], date: new Date('2023-10-04T13:00:00Z') },
+        { _id: 'hist5', type: 'Cycling', category: 'Cardio', duration: 45, intensity: 'high', date: new Date('2023-10-05T14:00:00Z') },
+      ],
+      dailyQuests: [
+        { questId: 'quest1', title: 'Morning Run', description: 'Run for 30 minutes.', rank: 'C', primaryStat: 'Endurance', exercises: [{ name: 'Running', duration: 30 }] },
+        { questId: 'quest2', title: 'Strength Training', description: 'Complete 3 sets of bench press.', rank: 'B', primaryStat: 'Strength', exercises: [{ name: 'Bench Press', sets: 3, reps: 8 }] },
+        { questId: 'quest3', title: 'Flexibility Routine', description: 'Hold a yoga pose for 5 minutes.', rank: 'D', primaryStat: 'Dexterity', exercises: [{ name: 'Yoga', duration: 300 }] },
+      ],
+    };
+    loginUser(mockUser);
+  }, [loginUser]);
+
   // Load user from local storage on initial mount
   useEffect(() => {
     const storedUser = localStorage.getItem('currentUser');
@@ -209,6 +236,7 @@ export const GlobalStateProvider = ({ children }) => {
         getDailyQuests,
         setError,
         clearError,
+        devLogin,
       }}
     >
       {children}

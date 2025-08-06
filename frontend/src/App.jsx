@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import TownPage from './pages/TownPage';
 import GuildPage from './pages/GuildPage';
@@ -19,6 +20,16 @@ const ProtectedRoute = ({ element }) => {
 };
 
 function App() {
+  const { devLogin } = useGlobalState();
+  const location = useLocation();
+
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    if (queryParams.get('dev') === 'true') {
+      devLogin();
+    }
+  }, [location, devLogin]);
+
   return (
     <>
       <Navbar />
