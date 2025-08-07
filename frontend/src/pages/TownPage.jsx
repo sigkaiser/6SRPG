@@ -7,19 +7,16 @@ import townMap3 from '../../assets/town-map3.png';
 import panel2 from '../../assets/panel2.png';
 
 const TownPage = () => {
-  const { currentUser, error: globalError, clearError, setError } = useGlobalState();
+  const { currentUser, error: globalError, clearError, loginUser } = useGlobalState();
   const [authView, setAuthView] = useState(null); // 'login', 'register', or null
-  const [registrationSuccessMessage, setRegistrationSuccessMessage] = useState('');
 
   const handleShowLogin = () => {
     clearError();
-    setRegistrationSuccessMessage('');
     setAuthView('login');
   };
 
   const handleShowRegister = () => {
     clearError();
-    setRegistrationSuccessMessage('');
     setAuthView('register');
   };
 
@@ -30,9 +27,29 @@ const TownPage = () => {
   };
 
   const handleRegistrationSuccess = () => {
-    setRegistrationSuccessMessage('Registration successful! Please login.');
     setAuthView('login'); // Switch to login form
     clearError();
+  };
+
+  const handleDevLogin = () => {
+    const devUser = {
+        _id: 'dev-user-id',
+        username: 'DevUser',
+        email: 'dev@user.com',
+        stats: {
+            strength: 10,
+            endurance: 10,
+            dexterity: 10,
+            intelligence: 10,
+            charisma: 10,
+        },
+        experience: 100,
+        level: 1,
+        inventory: [],
+        quests: []
+    };
+    loginUser(devUser);
+    handleLoginSuccess();
   };
 
   const renderContentArea = () => {
@@ -42,7 +59,6 @@ const TownPage = () => {
           onLoginSuccess={handleLoginSuccess}
           onSwitchToRegister={() => {
             clearError();
-            setRegistrationSuccessMessage('');
             setAuthView('register');
           }}
         />
@@ -54,7 +70,6 @@ const TownPage = () => {
           onRegistrationSuccess={handleRegistrationSuccess}
           onSwitchToLogin={() => {
             clearError();
-            setRegistrationSuccessMessage('');
             setAuthView('login');
           }}
         />
@@ -84,6 +99,9 @@ const TownPage = () => {
     { label: 'Login', onClick: handleShowLogin },
     { label: 'Register', onClick: handleShowRegister },
   ];
+  if (import.meta.env.DEV) {
+    authButtons.push({ label: 'Dev Login', onClick: handleDevLogin });
+  }
 
   const mainButtons = [
     { label: 'Guild', to: '/guild' },
