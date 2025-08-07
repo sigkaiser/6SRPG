@@ -46,7 +46,50 @@ const TownPage = () => {
         experience: 100,
         level: 1,
         inventory: [],
-        quests: []
+        exerciseHistory: [
+          {
+            _id: 'lift1',
+            date: new Date(new Date().setDate(new Date().getDate() - 2)).toISOString(),
+            type: 'Bench Press',
+            category: 'Lift',
+            sets: [
+              { reps: 10, weight: 135 },
+              { reps: 8, weight: 145 },
+            ]
+          },
+          {
+            _id: 'cardio1',
+            date: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(),
+            type: 'Running',
+            category: 'Cardio',
+            duration: 30,
+            intensity: 'moderate'
+          }
+        ],
+        dailyQuests: [
+          {
+            questId: 'quest1',
+            title: 'The Boulder\'s Burden',
+            rank: 'C-Rank',
+            description: 'A challenge for the aspiring strongman. Lift heavy, get strong.',
+            primaryStat: 'Strength',
+            exercises: [
+              { name: 'Squat', sets: 3, reps: 8, weightPercent: 75 },
+              { name: 'Deadlift', sets: 3, reps: 5, weightPercent: 80 }
+            ]
+          },
+          {
+            questId: 'quest2',
+            title: 'The Serpent\'s Stretch',
+            rank: 'D-Rank',
+            description: 'A test of flexibility and patience.',
+            primaryStat: 'Flexibility',
+            exercises: [
+              { name: 'Pigeon Pose', sets: 2, duration: 60 },
+              { name: 'Cat-Cow', sets: 2, duration: 120 }
+            ]
+          }
+        ]
     };
     loginUser(devUser);
     handleLoginSuccess();
