@@ -5,6 +5,19 @@ import noticeboardBg from '../../assets/noticeboard.png';
 import posting1 from '../../assets/posting1.png';
 import posting2 from '../../assets/posting2.png';
 
+// Function to generate semi-random but deterministic positions for quests
+const getQuestPosition = (index) => {
+  const positions = [
+    { top: '10%', left: '5%' },
+    { top: '40%', left: '30%' },
+    { top: '5%', left: '60%' },
+    { top: '50%', left: '70%' },
+    { top: '20%', left: '45%' },
+    { top: '60%', left: '15%' },
+  ];
+  return positions[index % positions.length];
+};
+
 const QuestBoard = () => {
   const { currentUser, getDailyQuests, updateUser, error, isLoading, setError, clearError } = useGlobalState();
   const [quests, setQuests] = useState([]);
@@ -36,12 +49,14 @@ const QuestBoard = () => {
       onClick={onClose}
     >
       <div
-        className="relative p-10 pt-16 text-center text-gray-800"
+        className="relative p-12 pt-20 text-center text-gray-800"
         style={{
           backgroundImage: `url(${posting1})`,
-          backgroundSize: '100% 100%',
-          width: '500px',
-          height: '600px',
+          backgroundSize: 'contain',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center',
+          width: '600px',  // Increased size
+          height: '720px', // Increased size
           fontFamily: '"Crimson Pro", serif',
         }}
         onClick={(e) => e.stopPropagation()}
@@ -49,7 +64,7 @@ const QuestBoard = () => {
         <h3 className="text-3xl font-bold mb-4">{quest.title} [{quest.rank}]</h3>
         <p className="mb-4">{quest.description}</p>
         <p className="font-semibold mb-2">Primary Stat: {quest.primaryStat}</p>
-        <ul className="list-none text-left mx-auto max-w-sm">
+        <ul className="list-none text-left mx-auto max-w-md">
           {quest.exercises.map((ex, index) => (
             <li key={index} className="mb-1">
               <strong>{ex.name}:</strong> {ex.sets} sets of {ex.reps ? `${ex.reps} reps` : `${ex.duration}s`}
@@ -59,7 +74,7 @@ const QuestBoard = () => {
         </ul>
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-3xl font-bold text-gray-800 hover:text-red-700"
+          className="absolute top-10 right-12 text-4xl font-bold text-gray-800 hover:text-red-700"
         >
           &times;
         </button>
@@ -92,22 +107,32 @@ const QuestBoard = () => {
       {error && <p className="text-red-500 bg-gray-800 p-2 rounded">{error}</p>}
 
       {quests.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {quests.map((quest, index) => (
-            <div
-              key={quest.questId}
-              className="relative text-center text-gray-800 p-4 cursor-pointer h-64"
-              style={{
-                backgroundImage: `url(${index % 2 === 0 ? posting1 : posting2})`,
-                backgroundSize: '100% 100%',
-                fontFamily: '"Crimson Pro", serif',
-              }}
-              onClick={() => setSelectedQuest(quest)}
-            >
-              <h3 className="text-xl font-bold pt-8">{quest.title}</h3>
-              <p className="text-lg font-semibold">[{quest.rank}]</p>
-            </div>
-          ))}
+        <div className="relative w-full h-[600px]"> {/* Container for sporadic quests */}
+          {quests.map((quest, index) => {
+            const position = getQuestPosition(index);
+            return (
+              <div
+                key={quest.questId}
+                className="absolute text-center text-gray-800 p-4 cursor-pointer"
+                style={{
+                  backgroundImage: `url(${index % 2 === 0 ? posting1 : posting2})`,
+                  backgroundSize: 'contain',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'center',
+                  width: '250px', // Set a fixed width
+                  height: '300px', // Set a fixed height
+                  top: position.top,
+                  left: position.left,
+                  fontFamily: '"Crimson Pro", serif',
+                  transform: `rotate(${Math.sin(index) * 4}deg)` // Add a slight rotation
+                }}
+                onClick={() => setSelectedQuest(quest)}
+              >
+                <h3 className="text-xl font-bold pt-10">{quest.title}</h3>
+                <p className="text-lg font-semibold">[{quest.rank}]</p>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <p className="text-white text-center text-xl" style={{ textShadow: '1px 1px 2px #000' }}>
