@@ -1,87 +1,121 @@
 import React, { useState, useEffect } from 'react';
 import { useGlobalState } from '../context/GlobalState';
 import { generateDailyQuests } from '../services/api';
+import noticeboardBg from '../../assets/noticeboard.png';
+import posting1 from '../../assets/posting1.png';
+import posting2 from '../../assets/posting2.png';
 
 const QuestBoard = () => {
-  const { currentUser, error, isLoading, getDailyQuests, setError, clearError } = useGlobalState();
+  const { currentUser, getDailyQuests, updateUser, error, isLoading, setError, clearError } = useGlobalState();
   const [quests, setQuests] = useState([]);
+  const [selectedQuest, setSelectedQuest] = useState(null);
 
   useEffect(() => {
-    // Only run this effect if the user's ID changes.
-    if (currentUser && currentUser.id) {
+    if (currentUser?.id && !currentUser.dailyQuests) {
       getDailyQuests(currentUser.id);
     }
-  }, [currentUser?.id, getDailyQuests]);
-
-  useEffect(() => {
-    if (currentUser && currentUser.dailyQuests) {
+    if (currentUser?.dailyQuests) {
       setQuests(currentUser.dailyQuests);
     }
-  }, [currentUser]);
+  }, [currentUser, getDailyQuests]);
 
   const handleGenerateQuests = async () => {
-    console.log('--- handleGenerateQuests called ---');
-    console.log('Current user object:', currentUser);
-
-    if (!currentUser || !currentUser.id) {
-      console.error('CRITICAL: No current user or user ID found. Aborting quest generation.');
-      return;
-    }
-
-    console.log(`Attempting to generate quests for user ID: ${currentUser.id}`);
+    if (!currentUser?.id) return;
     clearError();
-
-    console.log('Calling generateDailyQuests from api.js...');
     const response = await generateDailyQuests(currentUser.id);
-    console.log('Response received from generateDailyQuests in api.js:', response);
-
-    if (response.success) {
-      getDailyQuests(currentUser.id); // Refetch quests after generating new ones
+    if (response.success && response.user) {
+      updateUser(response.user);
     } else {
       setError(response.message);
     }
   };
 
-  if (isLoading) {
-    return <div className="text-center p-4">Loading quests...</div>;
-  }
-
-  if (error) {
-    return <div className="text-center p-4 text-red-500">{error}</div>;
-  }
-
-  return (
-    <div className="p-6 bg-gray-800 text-white rounded-lg shadow-xl">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-yellow-400">Quest Board</h2>
+  const QuestModal = ({ quest, onClose }) => (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="relative p-10 pt-16 text-center text-gray-800"
+        style={{
+          backgroundImage: `url(${posting1})`,
+          backgroundSize: '100% 100%',
+          width: '500px',
+          height: '600px',
+          fontFamily: '"Crimson Pro", serif',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-3xl font-bold mb-4">{quest.title} [{quest.rank}]</h3>
+        <p className="mb-4">{quest.description}</p>
+        <p className="font-semibold mb-2">Primary Stat: {quest.primaryStat}</p>
+        <ul className="list-none text-left mx-auto max-w-sm">
+          {quest.exercises.map((ex, index) => (
+            <li key={index} className="mb-1">
+              <strong>{ex.name}:</strong> {ex.sets} sets of {ex.reps ? `${ex.reps} reps` : `${ex.duration}s`}
+              {ex.weightPercent && ` at ${ex.weightPercent}% of 1RM`}
+            </li>
+          ))}
+        </ul>
         <button
-          onClick={handleGenerateQuests}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          onClick={onClose}
+          className="absolute top-4 right-4 text-3xl font-bold text-gray-800 hover:text-red-700"
         >
-          Generate New Quests
+          &times;
         </button>
       </div>
+    </div>
+  );
+
+  return (
+    <div
+      className="w-full h-full p-8"
+      style={{
+        backgroundImage: `url(${noticeboardBg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      <div className="flex justify-between items-start mb-6">
+        <h2 className="text-4xl font-bold text-white" style={{ fontFamily: '"Crimson Pro", serif', textShadow: '2px 2px 4px #000' }}>
+          Quest Board
+        </h2>
+        <button
+          onClick={handleGenerateQuests}
+          className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg border-2 border-yellow-800"
+          disabled={isLoading}
+        >
+          {isLoading ? 'Generating...' : 'Generate New Quests'}
+        </button>
+      </div>
+
+      {error && <p className="text-red-500 bg-gray-800 p-2 rounded">{error}</p>}
+
       {quests.length > 0 ? (
-        <div className="space-y-4">
-          {quests.map((quest) => (
-            <div key={quest.questId} className="bg-gray-700 p-4 rounded-lg">
-              <h3 className="text-xl font-bold">{quest.title} [{quest.rank}]</h3>
-              <p className="text-gray-400">{quest.description}</p>
-              <p className="mt-2">Primary Stat: {quest.primaryStat}</p>
-              <ul className="list-disc list-inside mt-2">
-                {quest.exercises.map((ex, index) => (
-                  <li key={index}>
-                    {ex.name}: {ex.sets} sets of {ex.reps ? `${ex.reps} reps` : `${ex.duration}s`}
-                    {ex.weightPercent && ` at ${ex.weightPercent}% of 1RM`}
-                  </li>
-                ))}
-              </ul>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {quests.map((quest, index) => (
+            <div
+              key={quest.questId}
+              className="relative text-center text-gray-800 p-4 cursor-pointer h-64"
+              style={{
+                backgroundImage: `url(${index % 2 === 0 ? posting1 : posting2})`,
+                backgroundSize: '100% 100%',
+                fontFamily: '"Crimson Pro", serif',
+              }}
+              onClick={() => setSelectedQuest(quest)}
+            >
+              <h3 className="text-xl font-bold pt-8">{quest.title}</h3>
+              <p className="text-lg font-semibold">[{quest.rank}]</p>
             </div>
           ))}
         </div>
       ) : (
-        <p>No quests available. Try generating new ones!</p>
+        <p className="text-white text-center text-xl" style={{ textShadow: '1px 1px 2px #000' }}>
+          No quests available. Generate new ones!
+        </p>
       )}
+
+      {selectedQuest && <QuestModal quest={selectedQuest} onClose={() => setSelectedQuest(null)} />}
     </div>
   );
 };

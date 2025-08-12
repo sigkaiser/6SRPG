@@ -172,3 +172,18 @@ export const generateDailyQuests = async (userId) => {
     return { success: false, message: error.message || 'A network error occurred while generating daily quests.' };
   }
 };
+
+export const deleteHistory = async (userId, exerciseId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/users/${userId}/exercises/${exerciseId}`, {
+      method: 'DELETE',
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      return { success: false, message: data.message || 'Failed to delete exercise.' };
+    }
+    return { success: true, ...data };
+  } catch (error) {
+    return { success: false, message: error.message || 'A network error occurred while deleting exercise.' };
+  }
+};

@@ -309,4 +309,29 @@ router.put('/:id/preferences', async (req, res) => {
   }
 });
 
+// DELETE /api/users/:userId/exercises/:exerciseId
+router.delete('/:userId/exercises/:exerciseId', async (req, res) => {
+  const { userId, exerciseId } = req.params;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const exerciseIndex = user.exerciseHistory.findIndex(ex => ex._id.toString() === exerciseId);
+    if (exerciseIndex === -1) {
+      return res.status(404).json({ message: 'Exercise not found' });
+    }
+
+    user.exerciseHistory.splice(exerciseIndex, 1);
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Exercise deleted successfully', user: user.toJSON() });
+  } catch (error) {
+    console.error('Error deleting exercise:', error);
+    res.status(500).json({ message: 'Failed to delete exercise' });
+  }
+});
+
 module.exports = router;
