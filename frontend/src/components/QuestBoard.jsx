@@ -18,6 +18,26 @@ const getQuestPosition = (index) => {
   return positions[index % positions.length];
 };
 
+const rankColorMap = {
+  S: '#8B0000', // Dark Red
+  A: '#FF0000', // Red
+  B: '#FFA500', // Orange
+  C: '#FFFF00', // Yellow
+  D: '#008000', // Green
+  E: '#0000FF', // Blue
+  F: '#EE82EE', // Light Violet
+};
+
+const getRankStyle = (rank) => {
+  const rankLetter = rank.charAt(0).toUpperCase();
+  return {
+    color: rankColorMap[rankLetter] || '#000000', // Default to black
+    fontWeight: 'bold',
+    textShadow: '1px 1px 2px #fff',
+  };
+};
+
+
 const QuestBoard = () => {
   const { currentUser, getDailyQuests, updateUser, error, isLoading, setError, clearError } = useGlobalState();
   const [quests, setQuests] = useState([]);
@@ -43,44 +63,47 @@ const QuestBoard = () => {
     }
   };
 
-  const QuestModal = ({ quest, onClose }) => (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
-      onClick={onClose}
-    >
+  const QuestModal = ({ quest, onClose }) => {
+    const rankLetter = quest.rank.charAt(0).toUpperCase();
+    return (
       <div
-        className="relative p-12 pt-20 text-center text-gray-800"
-        style={{
-          backgroundImage: `url(${posting1})`,
-          backgroundSize: 'contain',
-          backgroundRepeat: 'no-repeat',
-          backgroundPosition: 'center',
-          width: '600px',  // Increased size
-          height: '720px', // Increased size
-          fontFamily: '"Crimson Pro", serif',
-        }}
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
+        onClick={onClose}
       >
-        <h3 className="text-3xl font-bold mb-4">{quest.title} [{quest.rank}]</h3>
-        <p className="mb-4">{quest.description}</p>
-        <p className="font-semibold mb-2">Primary Stat: {quest.primaryStat}</p>
-        <ul className="list-none text-left mx-auto max-w-md">
-          {quest.exercises.map((ex, index) => (
-            <li key={index} className="mb-1">
-              <strong>{ex.name}:</strong> {ex.sets} sets of {ex.reps ? `${ex.reps} reps` : `${ex.duration}s`}
-              {ex.weightPercent && ` at ${ex.weightPercent}% of 1RM`}
-            </li>
-          ))}
-        </ul>
-        <button
-          onClick={onClose}
-          className="absolute top-10 right-12 text-4xl font-bold text-gray-800 hover:text-red-700"
+        <div
+          className="relative p-12 pt-20 text-center text-gray-800"
+          style={{
+            backgroundImage: `url(${posting1})`,
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
+            width: '600px',
+            height: '720px',
+            fontFamily: '"Crimson Pro", serif',
+          }}
+          onClick={(e) => e.stopPropagation()}
         >
-          &times;
-        </button>
+          <h3 className="text-3xl font-bold mb-4">{quest.title} [<span style={getRankStyle(quest.rank)}>{rankLetter}</span>]</h3>
+          <p className="mb-4">{quest.description}</p>
+          <p className="font-semibold mb-2">Primary Stat: {quest.primaryStat}</p>
+          <ul className="list-none text-left mx-auto max-w-md">
+            {quest.exercises.map((ex, index) => (
+              <li key={index} className="mb-1">
+                <strong>{ex.name}:</strong> {ex.sets} sets of {ex.reps ? `${ex.reps} reps` : `${ex.duration}s`}
+                {ex.weightPercent && ` at ${ex.weightPercent}% of 1RM`}
+              </li>
+            ))}
+          </ul>
+          <button
+            onClick={onClose}
+            className="absolute top-10 right-12 text-4xl font-bold text-gray-800 hover:text-red-700"
+          >
+            &times;
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div
@@ -107,9 +130,10 @@ const QuestBoard = () => {
       {error && <p className="text-red-500 bg-gray-800 p-2 rounded">{error}</p>}
 
       {quests.length > 0 ? (
-        <div className="relative w-full h-[600px]"> {/* Container for sporadic quests */}
+        <div className="relative w-full h-[600px]">
           {quests.map((quest, index) => {
             const position = getQuestPosition(index);
+            const rankLetter = quest.rank.charAt(0).toUpperCase();
             return (
               <div
                 key={quest.questId}
@@ -119,17 +143,18 @@ const QuestBoard = () => {
                   backgroundSize: 'contain',
                   backgroundRepeat: 'no-repeat',
                   backgroundPosition: 'center',
-                  width: '250px', // Set a fixed width
-                  height: '300px', // Set a fixed height
+                  width: '200px', // Reduced size
+                  height: '240px', // Reduced size
                   top: position.top,
                   left: position.left,
                   fontFamily: '"Crimson Pro", serif',
-                  transform: `rotate(${Math.sin(index) * 4}deg)` // Add a slight rotation
+                  transform: `rotate(${Math.sin(index) * 4}deg)`,
+                  zIndex: 10, // Added z-index to help with clickability
                 }}
                 onClick={() => setSelectedQuest(quest)}
               >
-                <h3 className="text-xl font-bold pt-10">{quest.title}</h3>
-                <p className="text-lg font-semibold">[{quest.rank}]</p>
+                <h3 className="text-xl font-bold pt-8">{quest.title}</h3>
+                <p className="text-lg font-semibold">[<span style={getRankStyle(quest.rank)}>{rankLetter}</span>]</p>
               </div>
             );
           })}
