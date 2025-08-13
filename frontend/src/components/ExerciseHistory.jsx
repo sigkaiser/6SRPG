@@ -68,7 +68,7 @@ const ExerciseHistory = () => {
       }}
     >
       <h3 className="text-3xl font-bold text-center text-black mb-6">Your Exercise History</h3>
-      <div className="space-y-4" style={{ padding: '0 10rem' }}> {/* Aggressive horizontal padding */}
+      <div className="space-y-4" style={{ padding: '0 12rem' }}> {/* More aggressive horizontal padding */}
         {paginatedHistory.map((entry) => (
           <div
             key={entry._id}

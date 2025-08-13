@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useGlobalState } from '../context/GlobalState';
 import { generateDailyQuests } from '../services/api';
 import noticeboardBg from '../../assets/noticeboard.png';
@@ -37,14 +38,54 @@ const getRankStyle = (rank) => {
   };
 };
 
+const QuestModal = ({ quest, onClose }) => {
+  const rankLetter = quest.rank.charAt(0).toUpperCase();
+  // The modal is now rendered into the body, outside of the main app structure
+  return createPortal(
+    <div
+      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="relative p-12 pt-20 text-center text-gray-800"
+        style={{
+          backgroundImage: `url(${posting1})`,
+          backgroundSize: 'contain',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center',
+          width: '600px',
+          height: '720px',
+          fontFamily: '"Crimson Pro", serif',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-3xl font-bold mb-4">{quest.title} [<span style={getRankStyle(quest.rank)}>{rankLetter}</span>]</h3>
+        <p className="mb-4">{quest.description}</p>
+        <p className="font-semibold mb-2">Primary Stat: {quest.primaryStat}</p>
+        <ul className="list-none text-left mx-auto max-w-md">
+          {quest.exercises.map((ex, index) => (
+            <li key={index} className="mb-1">
+              <strong>{ex.name}:</strong> {ex.sets} sets of {ex.reps ? `${ex.reps} reps` : `${ex.duration}s`}
+              {ex.weightPercent && ` at ${ex.weightPercent}% of 1RM`}
+            </li>
+          ))}
+        </ul>
+        <button
+          onClick={onClose}
+          className="absolute top-10 right-12 text-4xl font-bold text-gray-800 hover:text-red-700"
+        >
+          &times;
+        </button>
+      </div>
+    </div>,
+    document.body
+  );
+};
 
 const QuestBoard = () => {
   const { currentUser, getDailyQuests, updateUser, error, isLoading, setError, clearError } = useGlobalState();
   const [quests, setQuests] = useState([]);
   const [selectedQuest, setSelectedQuest] = useState(null);
-
-  // --- DIAGNOSTIC LOG ---
-  console.log('QuestBoard component rendered. Current selectedQuest:', selectedQuest);
 
   useEffect(() => {
     if (currentUser?.id && !currentUser.dailyQuests) {
@@ -64,63 +105,6 @@ const QuestBoard = () => {
     } else {
       setError(response.message);
     }
-  };
-
-  const handleQuestClick = (quest) => {
-    // --- DIAGNOSTIC LOG ---
-    console.log('handleQuestClick triggered. Quest:', quest);
-    setSelectedQuest(quest);
-  };
-
-  const handleCloseModal = () => {
-    // --- DIAGNOSTIC LOG ---
-    console.log('handleCloseModal triggered.');
-    setSelectedQuest(null);
-  };
-
-  const QuestModal = ({ quest, onClose }) => {
-    // --- DIAGNOSTIC LOG ---
-    console.log('QuestModal component is rendering. Quest:', quest);
-
-    const rankLetter = quest.rank.charAt(0).toUpperCase();
-    return (
-      <div
-        className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
-        onClick={onClose}
-      >
-        <div
-          className="relative p-12 pt-20 text-center text-gray-800"
-          style={{
-            backgroundImage: `url(${posting1})`,
-            backgroundSize: 'contain',
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center',
-            width: '600px',
-            height: '720px',
-            fontFamily: '"Crimson Pro", serif',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <h3 className="text-3xl font-bold mb-4">{quest.title} [<span style={getRankStyle(quest.rank)}>{rankLetter}</span>]</h3>
-          <p className="mb-4">{quest.description}</p>
-          <p className="font-semibold mb-2">Primary Stat: {quest.primaryStat}</p>
-          <ul className="list-none text-left mx-auto max-w-md">
-            {quest.exercises.map((ex, index) => (
-              <li key={index} className="mb-1">
-                <strong>{ex.name}:</strong> {ex.sets} sets of {ex.reps ? `${ex.reps} reps` : `${ex.duration}s`}
-                {ex.weightPercent && ` at ${ex.weightPercent}% of 1RM`}
-              </li>
-            ))}
-          </ul>
-          <button
-            onClick={onClose}
-            className="absolute top-10 right-12 text-4xl font-bold text-gray-800 hover:text-red-700"
-          >
-            &times;
-          </button>
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -169,7 +153,7 @@ const QuestBoard = () => {
                   transform: `rotate(${Math.sin(index) * 4}deg)`,
                   zIndex: 10,
                 }}
-                onClick={() => handleQuestClick(quest)}
+                onClick={() => setSelectedQuest(quest)}
               >
                 <h3 className="text-xl font-bold pt-8">{quest.title}</h3>
                 <p className="text-lg font-semibold">[<span style={getRankStyle(quest.rank)}>{rankLetter}</span>]</p>
@@ -183,7 +167,7 @@ const QuestBoard = () => {
         </p>
       )}
 
-      {selectedQuest && <QuestModal quest={selectedQuest} onClose={handleCloseModal} />}
+      {selectedQuest && <QuestModal quest={selectedQuest} onClose={() => setSelectedQuest(null)} />}
     </div>
   );
 };
