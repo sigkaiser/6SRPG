@@ -43,6 +43,9 @@ const QuestBoard = () => {
   const [quests, setQuests] = useState([]);
   const [selectedQuest, setSelectedQuest] = useState(null);
 
+  // --- DIAGNOSTIC LOG ---
+  console.log('QuestBoard component rendered. Current selectedQuest:', selectedQuest);
+
   useEffect(() => {
     if (currentUser?.id && !currentUser.dailyQuests) {
       getDailyQuests(currentUser.id);
@@ -63,7 +66,22 @@ const QuestBoard = () => {
     }
   };
 
+  const handleQuestClick = (quest) => {
+    // --- DIAGNOSTIC LOG ---
+    console.log('handleQuestClick triggered. Quest:', quest);
+    setSelectedQuest(quest);
+  };
+
+  const handleCloseModal = () => {
+    // --- DIAGNOSTIC LOG ---
+    console.log('handleCloseModal triggered.');
+    setSelectedQuest(null);
+  };
+
   const QuestModal = ({ quest, onClose }) => {
+    // --- DIAGNOSTIC LOG ---
+    console.log('QuestModal component is rendering. Quest:', quest);
+
     const rankLetter = quest.rank.charAt(0).toUpperCase();
     return (
       <div
@@ -143,15 +161,15 @@ const QuestBoard = () => {
                   backgroundSize: 'contain',
                   backgroundRepeat: 'no-repeat',
                   backgroundPosition: 'center',
-                  width: '200px', // Reduced size
-                  height: '240px', // Reduced size
+                  width: '200px',
+                  height: '240px',
                   top: position.top,
                   left: position.left,
                   fontFamily: '"Crimson Pro", serif',
                   transform: `rotate(${Math.sin(index) * 4}deg)`,
-                  zIndex: 10, // Added z-index to help with clickability
+                  zIndex: 10,
                 }}
-                onClick={() => setSelectedQuest(quest)}
+                onClick={() => handleQuestClick(quest)}
               >
                 <h3 className="text-xl font-bold pt-8">{quest.title}</h3>
                 <p className="text-lg font-semibold">[<span style={getRankStyle(quest.rank)}>{rankLetter}</span>]</p>
@@ -165,7 +183,7 @@ const QuestBoard = () => {
         </p>
       )}
 
-      {selectedQuest && <QuestModal quest={selectedQuest} onClose={() => setSelectedQuest(null)} />}
+      {selectedQuest && <QuestModal quest={selectedQuest} onClose={handleCloseModal} />}
     </div>
   );
 };
