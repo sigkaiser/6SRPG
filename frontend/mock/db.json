@@ -1,0 +1,43 @@
+{
+  "users": [
+    {
+      "id": "68828d04177d6fff3f2a7959",
+      "username": "Kaitzer",
+      "email": "siegerkaiser@tuta.io",
+      "level": 1,
+      "experience": 0,
+      "stats": {
+        "upperBodyStrength": { "current": null, "potential": null, "xp": 0, "xpToNext": 0 },
+        "lowerBodyStrength": { "current": null, "potential": null, "xp": 0, "xpToNext": 0 },
+        "coreStrength": { "current": null, "potential": null, "xp": 0, "xpToNext": 0 },
+        "powerExplosiveness": { "current": null, "potential": null, "xp": 0, "xpToNext": 0 },
+        "flexibilityMobility": { "current": null, "potential": null, "xp": 0, "xpToNext": 0 },
+        "cardioEndurance": { "current": null, "potential": null, "xp": 0, "xpToNext": 0 }
+      },
+      "preferences": {
+        "darkMode": false,
+        "units": "metric",
+        "trainingGoals": ["increase upper body strength"],
+        "excludedEquipment": ["foam roll", "kettlebells"],
+        "excludedMuscles": ["calves", "abductors"],
+        "excludedExercises": ["Air Bike"],
+        "customInstructions": "Recovering from a hip injury - go easy!"
+      },
+      "exerciseHistory": [
+        {
+          "id": "6887e7b1ee7df2c64a6af9ae",
+          "date": "2025-08-27T20:32:17.777Z",
+          "type": "Barbell Squat",
+          "category": "Lift",
+          "sets": [
+            { "reps": 10, "weight": 135 },
+            { "reps": 8, "weight": 185 }
+          ]
+        }
+      ],
+      "createdAt": "2025-08-24T00:24:04.423Z",
+      "updatedAt": "2025-09-19T01:59:56.774Z",
+      "__v": 9
+    }
+  ]
+}
