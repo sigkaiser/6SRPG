@@ -31,34 +31,6 @@ const GET_DAILY_QUESTS_START = 'GET_DAILY_QUESTS_START';
 const GET_DAILY_QUESTS_SUCCESS = 'GET_DAILY_QUESTS_SUCCESS';
 const GET_DAILY_QUESTS_FAIL = 'GET_DAILY_QUESTS_FAIL';
 
-// A utility function to merge user data intelligently.
-// - Ignores null/undefined values from the payload.
-// - Prevents overwriting a populated array with an empty one.
-const mergeUserData = (existingUser, newUser) => {
-  if (!newUser) return existingUser;
-
-  const merged = { ...existingUser };
-
-  Object.keys(newUser).forEach(key => {
-    const existingValue = merged[key];
-    const newValue = newUser[key];
-
-    // Rule 1: Skip update for this key if the new value is null or undefined.
-    if (newValue === null || newValue === undefined) {
-      return;
-    }
-
-    // Rule 2: Skip update if new value is an empty array and it would overwrite an existing, non-empty array.
-    if (Array.isArray(newValue) && newValue.length === 0 && Array.isArray(existingValue) && existingValue.length > 0) {
-      return;
-    }
-
-    merged[key] = newValue;
-  });
-
-  return merged;
-};
-
 // Reducer
 function globalReducer(state, action) {
   switch (action.type) {
@@ -68,7 +40,7 @@ function globalReducer(state, action) {
     case LOGOUT:
       return { ...state, currentUser: null, currentUserDetailedContributions: null, error: null };
     case UPDATE_USER:
-      return { ...state, currentUser: mergeUserData(state.currentUser, action.payload) };
+      return { ...state, currentUser: action.payload };
     case LOAD_EXERCISES_START:
       return { ...state, loadingExercises: true, error: null };
     case LOAD_EXERCISES_SUCCESS:
@@ -85,7 +57,11 @@ function globalReducer(state, action) {
       return {
         ...state,
         isLoadingStats: false,
-        currentUser: mergeUserData(state.currentUser, action.payload.user),
+        currentUser: {
+          ...state.currentUser, // Keep all existing user data
+          stats: action.payload.user.stats, // ONLY update the stats field
+        },
+        // Also update the separate detailed contributions field
         currentUserDetailedContributions: action.payload.detailedContributions,
         error: null
       };
@@ -94,12 +70,7 @@ function globalReducer(state, action) {
     case GET_DAILY_QUESTS_START:
       return { ...state, isLoading: true, error: null };
     case GET_DAILY_QUESTS_SUCCESS:
-      return {
-        ...state,
-        currentUser: mergeUserData(state.currentUser, action.payload),
-        isLoading: false,
-        error: null,
-      };
+      return { ...state, currentUser: action.payload, isLoading: false, error: null };
     case GET_DAILY_QUESTS_FAIL:
       return { ...state, isLoading: false, error: action.payload };
     default:
