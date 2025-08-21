@@ -57,7 +57,11 @@ function globalReducer(state, action) {
       return {
         ...state,
         isLoadingStats: false,
-        currentUser: action.payload.user,
+        currentUser: {
+          ...state.currentUser, // Keep all existing user data
+          stats: action.payload.user.stats, // ONLY update the stats field
+        },
+        // Also update the separate detailed contributions field
         currentUserDetailedContributions: action.payload.detailedContributions,
         error: null
       };
