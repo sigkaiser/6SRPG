@@ -32,7 +32,7 @@ const rankColorMap = {
 const getRankStyle = (rank) => {
   const rankLetter = rank.charAt(0).toUpperCase();
   return {
-    color: rankColorMap[rankLetter] || '#000000', // Default to black
+    color: rankColorMap[rankLetter] || '#000000',
     fontWeight: 'bold',
     textShadow: '1px 1px 2px #fff',
   };
@@ -40,42 +40,52 @@ const getRankStyle = (rank) => {
 
 const QuestModal = ({ quest, onClose }) => {
   const rankLetter = quest.rank.charAt(0).toUpperCase();
-  // The modal is now rendered into the body, outside of the main app structure
   return createPortal(
     <div
-      className="fixed inset-0 bg-black bg-opacity-70 flex justify-end items-center z-50 pr-20" // Align to the right
+      className="fixed inset-0 bg-black bg-opacity-70 flex items-center z-50"
       onClick={onClose}
     >
       <div
-        className="relative p-12 pt-28 text-center text-black" // Increased top padding, changed text color
+        className="relative text-center ml-auto mr-20"
         style={{
           backgroundImage: `url(${posting1})`,
-          backgroundSize: 'contain',
+          backgroundSize: '100% 100%',
           backgroundRepeat: 'no-repeat',
           backgroundPosition: 'center',
-          width: '800px', // Widened modal
-          height: '720px',
+          width: '600px',
+          height: '800px',
           fontFamily: '"Crimson Pro", serif',
+          color: 'white',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-3xl font-bold mb-4">{quest.title} [<span style={getRankStyle(quest.rank)}>{rankLetter}</span>]</h3>
-        <p className="mb-4">{quest.description}</p>
-        <p className="font-semibold mb-2">Primary Stat: {quest.primaryStat}</p>
-        <ul className="list-none text-left mx-auto max-w-md">
-          {quest.exercises.map((ex, index) => (
-            <li key={index} className="mb-1">
-              <strong>{ex.name}:</strong> {ex.sets} sets of {ex.reps ? `${ex.reps} reps` : `${ex.duration}s`}
-              {ex.weightPercent && ` at ${ex.weightPercent}% of 1RM`}
-            </li>
-          ))}
-        </ul>
+        {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-10 right-12 text-4xl font-bold text-black hover:text-red-700"
+          className="absolute top-10 right-12 text-4xl font-bold text-white hover:text-red-700"
         >
           &times;
         </button>
+
+        {/* Inner content wrapper positioned lower on the poster */}
+        <div
+          className="absolute left-1/2 -translate-x-1/2 text-center px-12"
+          style={{ top: '220px', width: '90%' }} // lowered further down
+        >
+          <h3 className="text-8xl font-bold mb-6">
+            {quest.title} [<span style={getRankStyle(quest.rank)}>{rankLetter}</span>]
+          </h3>
+          <p className="mb-4">{quest.description}</p>
+          <p className="font-semibold mb-2">Primary Stat: {quest.primaryStat}</p>
+          <ul className="list-none text-left mx-auto max-w-lg">
+            {quest.exercises.map((ex, index) => (
+              <li key={index} className="mb-1">
+                <strong>{ex.name}:</strong> {ex.sets} sets of {ex.reps ? `${ex.reps} reps` : `${ex.duration}s`}
+                {ex.weightPercent && ` at ${ex.weightPercent}% of 1RM`}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>,
     document.body
