@@ -47,7 +47,7 @@ const QuestModal = ({ quest, onClose }) => {
       onClick={onClose}
     >
       <div
-        className="p-12 pt-56 text-center"
+        className="relative p-12 pt-56 text-center"
         style={{
           backgroundImage: `url(${posting1})`,
           backgroundSize: '100% 100%',
@@ -58,8 +58,9 @@ const QuestModal = ({ quest, onClose }) => {
           fontFamily: '"Crimson Pro", serif',
           color: 'white',
           position: 'absolute',
-          top: '10vh',
+          top: '50%',
           right: '5rem',
+          transform: 'translateY(-50%)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
