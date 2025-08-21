@@ -40,7 +40,13 @@ function globalReducer(state, action) {
     case LOGOUT:
       return { ...state, currentUser: null, currentUserDetailedContributions: null, error: null };
     case UPDATE_USER:
-      return { ...state, currentUser: action.payload };
+      return {
+        ...state,
+        currentUser: {
+          ...state.currentUser,
+          ...action.payload
+        }
+      };
     case LOAD_EXERCISES_START:
       return { ...state, loadingExercises: true, error: null };
     case LOAD_EXERCISES_SUCCESS:
@@ -57,7 +63,10 @@ function globalReducer(state, action) {
       return {
         ...state,
         isLoadingStats: false,
-        currentUser: action.payload.user,
+        currentUser: {
+          ...state.currentUser,
+          ...action.payload.user
+        },
         currentUserDetailedContributions: action.payload.detailedContributions,
         error: null
       };
@@ -66,7 +75,15 @@ function globalReducer(state, action) {
     case GET_DAILY_QUESTS_START:
       return { ...state, isLoading: true, error: null };
     case GET_DAILY_QUESTS_SUCCESS:
-      return { ...state, currentUser: action.payload, isLoading: false, error: null };
+      return {
+        ...state,
+        currentUser: {
+          ...state.currentUser,
+          ...action.payload,
+        },
+        isLoading: false,
+        error: null,
+      };
     case GET_DAILY_QUESTS_FAIL:
       return { ...state, isLoading: false, error: action.payload };
     default:
