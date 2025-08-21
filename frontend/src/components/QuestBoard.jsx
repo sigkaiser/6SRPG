@@ -50,22 +50,22 @@ const QuestModal = ({ quest, onClose }) => {
         className="relative p-12 pt-32 text-center"
         style={{
           backgroundImage: `url(${posting1})`,
-          backgroundSize: 'contain',
+          backgroundSize: '100% 100%',
           backgroundRepeat: 'no-repeat',
           backgroundPosition: 'center',
-          width: '900px', // Widened modal
-          height: '720px',
+          width: '600px', // Adjusted width
+          height: '800px', // Adjusted height
           fontFamily: '"Crimson Pro", serif',
           color: 'black',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-3xl font-bold mb-4" style={{ color: 'black' }}>{quest.title} [<span style={getRankStyle(quest.rank)}>{rankLetter}</span>]</h3>
-        <p className="mb-4" style={{ color: 'black' }}>{quest.description}</p>
-        <p className="font-semibold mb-2" style={{ color: 'black' }}>Primary Stat: {quest.primaryStat}</p>
-        <ul className="list-none text-left mx-auto max-w-md">
+        <h3 className="text-3xl font-bold mb-4">{quest.title} [<span style={getRankStyle(quest.rank)}>{rankLetter}</span>]</h3>
+        <p className="mb-4">{quest.description}</p>
+        <p className="font-semibold mb-2">Primary Stat: {quest.primaryStat}</p>
+        <ul className="list-none text-left mx-auto max-w-lg">
           {quest.exercises.map((ex, index) => (
-            <li key={index} className="mb-1" style={{ color: 'black' }}>
+            <li key={index} className="mb-1">
               <strong>{ex.name}:</strong> {ex.sets} sets of {ex.reps ? `${ex.reps} reps` : `${ex.duration}s`}
               {ex.weightPercent && ` at ${ex.weightPercent}% of 1RM`}
             </li>
