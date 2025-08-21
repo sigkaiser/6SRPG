@@ -43,28 +43,29 @@ const QuestModal = ({ quest, onClose }) => {
   // The modal is now rendered into the body, outside of the main app structure
   return createPortal(
     <div
-      className="fixed inset-0 bg-black bg-opacity-70 flex justify-end items-center z-50 pr-20" // Align to the right
+      className="fixed inset-0 bg-black bg-opacity-70 flex justify-end items-center z-50 pr-40" // Align to the right
       onClick={onClose}
     >
       <div
-        className="relative p-12 pt-28 text-center text-black" // Increased top padding, changed text color
+        className="relative p-12 pt-32 text-center"
         style={{
           backgroundImage: `url(${posting1})`,
           backgroundSize: 'contain',
           backgroundRepeat: 'no-repeat',
           backgroundPosition: 'center',
-          width: '800px', // Widened modal
+          width: '900px', // Widened modal
           height: '720px',
           fontFamily: '"Crimson Pro", serif',
+          color: 'black',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-3xl font-bold mb-4">{quest.title} [<span style={getRankStyle(quest.rank)}>{rankLetter}</span>]</h3>
-        <p className="mb-4">{quest.description}</p>
-        <p className="font-semibold mb-2">Primary Stat: {quest.primaryStat}</p>
+        <h3 className="text-3xl font-bold mb-4" style={{ color: 'black' }}>{quest.title} [<span style={getRankStyle(quest.rank)}>{rankLetter}</span>]</h3>
+        <p className="mb-4" style={{ color: 'black' }}>{quest.description}</p>
+        <p className="font-semibold mb-2" style={{ color: 'black' }}>Primary Stat: {quest.primaryStat}</p>
         <ul className="list-none text-left mx-auto max-w-md">
           {quest.exercises.map((ex, index) => (
-            <li key={index} className="mb-1">
+            <li key={index} className="mb-1" style={{ color: 'black' }}>
               <strong>{ex.name}:</strong> {ex.sets} sets of {ex.reps ? `${ex.reps} reps` : `${ex.duration}s`}
               {ex.weightPercent && ` at ${ex.weightPercent}% of 1RM`}
             </li>
