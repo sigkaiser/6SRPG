@@ -43,11 +43,11 @@ const QuestModal = ({ quest, onClose }) => {
   // The modal is now rendered into the body, outside of the main app structure
   return createPortal(
     <div
-      className="fixed inset-0 bg-black bg-opacity-70 flex justify-end items-center z-50 pr-40" // Align to the right
+      className="fixed inset-0 bg-black bg-opacity-70 flex items-center z-50"
       onClick={onClose}
     >
       <div
-        className="relative p-12 pt-32 text-center"
+        className="relative p-12 pt-40 text-center ml-auto mr-20"
         style={{
           backgroundImage: `url(${posting1})`,
           backgroundSize: '100% 100%',
@@ -56,7 +56,7 @@ const QuestModal = ({ quest, onClose }) => {
           width: '600px', // Adjusted width
           height: '800px', // Adjusted height
           fontFamily: '"Crimson Pro", serif',
-          color: 'black',
+          color: 'white',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -73,7 +73,7 @@ const QuestModal = ({ quest, onClose }) => {
         </ul>
         <button
           onClick={onClose}
-          className="absolute top-10 right-12 text-4xl font-bold text-black hover:text-red-700"
+          className="absolute top-10 right-12 text-4xl font-bold text-white hover:text-red-700"
         >
           &times;
         </button>
