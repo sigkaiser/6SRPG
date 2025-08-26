@@ -150,6 +150,7 @@ const generatePersonalDailyQuests = async (user) => {
     const now = new Date();
     user.dailyQuests = user.dailyQuests.filter(quest => quest.expiresAt > now);
     user.dailyQuests.push(...validatedQuests);
+    user.markModified('dailyQuests'); // Explicitly mark the array as modified
     await user.save();
     console.log('--- Quests saved to user ---');
 
