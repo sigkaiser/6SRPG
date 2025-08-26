@@ -334,4 +334,44 @@ router.delete('/:userId/exercises/:exerciseId', async (req, res) => {
   }
 });
 
+// Quest Action Routes
+
+const handleQuestAction = async (req, res, newStatus) => {
+  const { userId, questId } = req.params;
+  const { loggedExercises } = req.body;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const quest = user.dailyQuests.find(q => q.questId === questId);
+    if (!quest) {
+      return res.status(404).json({ message: 'Quest not found' });
+    }
+
+    quest.status = newStatus;
+    if (newStatus === 'completed' && loggedExercises) {
+      quest.userLoggedExercises = loggedExercises;
+    }
+
+    await user.save();
+    res.status(200).json({ success: true, message: `Quest ${newStatus} successfully`, user: user.toJSON() });
+  } catch (error) {
+    console.error(`Error updating quest to ${newStatus}:`, error);
+    res.status(500).json({ message: `Failed to update quest status to ${newStatus}` });
+  }
+};
+
+// POST /api/users/:userId/quests/:questId/accept
+router.post('/:userId/quests/:questId/accept', (req, res) => handleQuestAction(req, res, 'accepted'));
+
+// POST /api/users/:userId/quests/:questId/abandon
+router.post('/:userId/quests/:questId/abandon', (req, res) => handleQuestAction(req, res, 'abandoned'));
+
+// POST /api/users/:userId/quests/:questId/complete
+router.post('/:userId/quests/:questId/complete', (req, res) => handleQuestAction(req, res, 'completed'));
+
+
 module.exports = router;
