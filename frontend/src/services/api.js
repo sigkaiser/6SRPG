@@ -173,6 +173,32 @@ export const generateDailyQuests = async (userId) => {
   }
 };
 
+const handleQuestAction = async (userId, questId, action, body = null) => {
+  const url = `${API_BASE_URL}/api/users/${userId}/quests/${questId}/${action}`;
+  try {
+    const options = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    };
+    if (body) {
+      options.body = JSON.stringify(body);
+    }
+    const response = await fetch(url, options);
+    const data = await response.json();
+    if (!response.ok) {
+      return { success: false, message: data.message || `Failed to ${action} quest.` };
+    }
+    return { success: true, ...data };
+  } catch (error) {
+    return { success: false, message: error.message || `A network error occurred while trying to ${action} the quest.` };
+  }
+};
+
+export const acceptQuest = (userId, questId) => handleQuestAction(userId, questId, 'accept');
+export const abandonQuest = (userId, questId) => handleQuestAction(userId, questId, 'abandon');
+export const completeQuest = (userId, questId, loggedExercises) => handleQuestAction(userId, questId, 'complete', { loggedExercises });
+
+
 export const deleteHistory = async (userId, exerciseId) => {
   try {
     const response = await fetch(`${API_BASE_URL}/api/users/${userId}/exercises/${exerciseId}`, {

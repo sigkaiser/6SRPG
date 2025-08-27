@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useGlobalState } from '../context/GlobalState';
-import { generateDailyQuests } from '../services/api';
+import { generateDailyQuests, acceptQuest, abandonQuest, completeQuest } from '../services/api';
 import noticeboardBg from '../../assets/noticeboard.png';
 import posting1 from '../../assets/posting1.png';
 import posting2 from '../../assets/posting2.png';
+import QuestLog from './QuestLog';
+import QuestCompletionForm from './QuestCompletionForm';
+
 
 // Function to generate semi-random but deterministic positions for quests
 const getQuestPosition = (index) => {
@@ -38,7 +41,7 @@ const getRankStyle = (rank) => {
   };
 };
 
-const QuestModal = ({ quest, onClose }) => {
+const QuestModal = ({ quest, onClose, onAccept, onAbandon, onComplete }) => {
   const rankLetter = quest.rank.charAt(0).toUpperCase();
   return createPortal(
     <div
@@ -85,6 +88,17 @@ const QuestModal = ({ quest, onClose }) => {
               </li>
             ))}
           </ul>
+           <div className="absolute bottom-[-150px] left-1/2 -translate-x-1/2 w-full px-4">
+                {quest.status === 'available' && (
+                    <button onClick={() => onAccept(quest.questId)} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded w-full">Accept Quest</button>
+                )}
+                {quest.status === 'accepted' && (
+                    <div className="flex gap-4">
+                        <button onClick={() => onComplete(quest)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-1/2">Complete Quest</button>
+                        <button onClick={() => onAbandon(quest.questId)} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded w-1/2">Abandon Quest</button>
+                    </div>
+                )}
+            </div>
         </div>
       </div>
     </div>,
@@ -96,6 +110,8 @@ const QuestBoard = () => {
   const { currentUser, getDailyQuests, updateUser, error, isLoading, setError, clearError } = useGlobalState();
   const [quests, setQuests] = useState([]);
   const [selectedQuest, setSelectedQuest] = useState(null);
+  const [completingQuest, setCompletingQuest] = useState(null);
+
 
   useEffect(() => {
     if (currentUser?.id && !currentUser.dailyQuests) {
@@ -117,67 +133,122 @@ const QuestBoard = () => {
     }
   };
 
+  const handleAcceptQuest = async (questId) => {
+    const response = await acceptQuest(currentUser.id, questId);
+    if (response.success) {
+        updateUser(response.user);
+        setSelectedQuest(null); // Close modal on success
+    } else {
+        setError(response.message);
+    }
+  };
+
+  const handleAbandonQuest = async (questId) => {
+    const response = await abandonQuest(currentUser.id, questId);
+     if (response.success) {
+        updateUser(response.user);
+        setSelectedQuest(null); // Close modal on success
+    } else {
+        setError(response.message);
+    }
+  };
+
+  const handleCompleteQuest = async (questId, loggedExercises) => {
+    const response = await completeQuest(currentUser.id, questId, loggedExercises);
+     if (response.success) {
+        updateUser(response.user);
+        setCompletingQuest(null); // Close completion form
+    } else {
+        setError(response.message);
+    }
+  };
+
+  const availableQuests = quests.filter(q => q.status === 'available');
+
   return (
-    <div
-      className="w-full h-full p-8"
-      style={{
-        backgroundImage: `url(${noticeboardBg})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }}
-    >
-      <div className="flex justify-between items-start mb-6">
-        <h2 className="text-4xl font-bold text-white" style={{ fontFamily: '"Crimson Pro", serif', textShadow: '2px 2px 4px #000' }}>
-          Quest Board
-        </h2>
-        <button
-          onClick={handleGenerateQuests}
-          className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg border-2 border-yellow-800"
-          disabled={isLoading}
-        >
-          {isLoading ? 'Generating...' : 'Generate New Quests'}
-        </button>
-      </div>
-
-      {error && <p className="text-red-500 bg-gray-800 p-2 rounded">{error}</p>}
-
-      {quests.length > 0 ? (
-        <div className="relative w-full h-[600px]">
-          {quests.map((quest, index) => {
-            const position = getQuestPosition(index);
-            const rankLetter = quest.rank.charAt(0).toUpperCase();
-            return (
-              <div
-                key={quest.questId}
-                className="absolute text-center text-gray-800 p-4 cursor-pointer"
-                style={{
-                  backgroundImage: `url(${index % 2 === 0 ? posting1 : posting2})`,
-                  backgroundSize: 'contain',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'center',
-                  width: '200px',
-                  height: '240px',
-                  top: position.top,
-                  left: position.left,
-                  fontFamily: '"Crimson Pro", serif',
-                  transform: `rotate(${Math.sin(index) * 4}deg)`,
-                  zIndex: 10,
-                }}
-                onClick={() => setSelectedQuest(quest)}
-              >
-                <h3 className="text-xl font-bold pt-8">{quest.title}</h3>
-                <p className="text-lg font-semibold">[<span style={getRankStyle(quest.rank)}>{rankLetter}</span>]</p>
-              </div>
-            );
-          })}
+    <div className="flex w-full h-full">
+      <div
+        className="flex-grow h-full p-8"
+        style={{
+          backgroundImage: `url(${noticeboardBg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        <div className="flex justify-between items-start mb-6">
+          <h2 className="text-4xl font-bold text-white" style={{ fontFamily: '"Crimson Pro", serif', textShadow: '2px 2px 4px #000' }}>
+            Quest Board
+          </h2>
+          <button
+            onClick={handleGenerateQuests}
+            className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg border-2 border-yellow-800"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Generating...' : 'Generate New Quests'}
+          </button>
         </div>
-      ) : (
-        <p className="text-white text-center text-xl" style={{ textShadow: '1px 1px 2px #000' }}>
-          No quests available. Generate new ones!
-        </p>
-      )}
 
-      {selectedQuest && <QuestModal quest={selectedQuest} onClose={() => setSelectedQuest(null)} />}
+        {error && <p className="text-red-500 bg-gray-800 p-2 rounded">{error}</p>}
+
+        {availableQuests.length > 0 ? (
+          <div className="relative w-full h-[600px]">
+            {availableQuests.map((quest, index) => {
+              const position = getQuestPosition(index);
+              const rankLetter = quest.rank.charAt(0).toUpperCase();
+              return (
+                <div
+                  key={quest.questId}
+                  className="absolute text-center text-gray-800 p-4 cursor-pointer"
+                  style={{
+                    backgroundImage: `url(${index % 2 === 0 ? posting1 : posting2})`,
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                    width: '200px',
+                    height: '240px',
+                    top: position.top,
+                    left: position.left,
+                    fontFamily: '"Crimson Pro", serif',
+                    transform: `rotate(${Math.sin(index) * 4}deg)`,
+                    zIndex: 10,
+                  }}
+                  onClick={() => setSelectedQuest(quest)}
+                >
+                  <h3 className="text-xl font-bold pt-8">{quest.title}</h3>
+                  <p className="text-lg font-semibold">[<span style={getRankStyle(quest.rank)}>{rankLetter}</span>]</p>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-white text-center text-xl" style={{ textShadow: '1px 1px 2px #000' }}>
+            No available quests. Generate new ones or check your Quest Log.
+          </p>
+        )}
+
+        {selectedQuest && (
+          <QuestModal
+            quest={selectedQuest}
+            onClose={() => setSelectedQuest(null)}
+            onAccept={handleAcceptQuest}
+            onAbandon={handleAbandonQuest}
+            onComplete={(quest) => {
+              setSelectedQuest(null);
+              setCompletingQuest(quest);
+            }}
+          />
+        )}
+        {completingQuest && (
+          <QuestCompletionForm
+            quest={completingQuest}
+            onSubmit={handleCompleteQuest}
+            onClose={() => setCompletingQuest(null)}
+          />
+        )}
+      </div>
+      <div className="w-1/3 max-w-sm p-4 bg-black bg-opacity-50">
+        {currentUser && <QuestLog quests={quests} />}
+      </div>
     </div>
   );
 };
