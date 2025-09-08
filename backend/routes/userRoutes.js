@@ -361,8 +361,95 @@ const handleQuestAction = async (req, res, newStatus) => {
 
     console.log(`[QUEST ACTION] Quest found: "${quest.title}". Updating status to '${newStatus}'.`);
     quest.status = newStatus;
-    if (newStatus === 'completed' && loggedExercises) {
+
+    if (newStatus === 'completed' && Array.isArray(loggedExercises)) {
       quest.userLoggedExercises = loggedExercises;
+
+      try {
+        const exerciseDbData = await statCalculationService.fetchExerciseDb();
+        const statWeights = await statCalculationService.loadStatWeights();
+
+        const categorize = (cat) => {
+          const c = (cat || '').toLowerCase();
+          if ([
+            'powerlifting',
+            'strength',
+            'olympic weightlifting',
+            'strongman',
+            'plyometrics',
+          ].includes(c)) return 'Lift';
+          if (c === 'stretching') return 'Stretch';
+          if (c === 'cardio') return 'Cardio';
+          return 'Lift';
+        };
+
+        const newExerciseEntries = [];
+
+        for (const ex of loggedExercises) {
+          const metadata = exerciseDbData.find(e => e.name.toLowerCase() === ex.name.toLowerCase());
+          if (!metadata) continue;
+          const category = categorize(metadata.category);
+          const entry = { date: new Date(), type: ex.name, category };
+
+          if (category === 'Lift') {
+            entry.sets = Array.from({ length: ex.sets }, () => ({ reps: ex.reps, weight: ex.weight }));
+          } else if (category === 'Stretch') {
+            entry.sets = Array.from({ length: ex.sets }, () => ({ duration: ex.duration }));
+          } else if (category === 'Cardio') {
+            entry.duration = ex.duration ? ex.duration / 60 : 0; // seconds to minutes
+          }
+
+          user.exerciseHistory.push(entry);
+          newExerciseEntries.push({ entry, metadata });
+        }
+
+        if (newExerciseEntries.length > 0) {
+          const potentialResults = await statCalculationService.calculatePotentialStats(
+            user.exerciseHistory,
+            exerciseDbData,
+            statWeights
+          );
+          const { strongestLiftsByExercise, detailedContributions, ...newPotentials } = potentialResults;
+
+          if (!user.stats) user.stats = {};
+          TRACKED_STATS.forEach(statName => {
+            if (!user.stats[statName]) {
+              user.stats[statName] = { current: null, potential: null, xp: 0, xpToNext: 0 };
+            }
+            const calculatedPotential = newPotentials[statName];
+            const userStat = user.stats[statName];
+            if (calculatedPotential !== null) {
+              if (userStat.potential === null) {
+                userStat.potential = calculatedPotential;
+                userStat.current = Math.max(1, Math.round(0.10 * userStat.potential));
+                userStat.xp = 0;
+                userStat.xpToNext = statCalculationService.getXpToNext(userStat.current);
+              } else {
+                userStat.potential = calculatedPotential;
+              }
+            } else {
+              userStat.potential = null;
+              userStat.current = null;
+              userStat.xp = 0;
+              userStat.xpToNext = 0;
+            }
+          });
+
+          for (const { entry, metadata } of newExerciseEntries) {
+            const awardedXpMap = statCalculationService.calculateXpForExercise(
+              entry,
+              metadata,
+              statWeights,
+              strongestLiftsByExercise
+            );
+            user.stats = statCalculationService.applyXpAndLevelUp(user.stats, awardedXpMap);
+          }
+
+          user.markModified('stats');
+        }
+      } catch (err) {
+        console.error('[QUEST ACTION] Error processing completion exercises:', err);
+      }
     }
 
     await user.save();
