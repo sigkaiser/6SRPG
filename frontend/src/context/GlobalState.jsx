@@ -96,6 +96,8 @@ export const GlobalStateProvider = ({ children }) => {
   }, []);
 
   const updateUser = useCallback((userData) => {
+    // Persist updated user data so changes survive page refreshes
+    localStorage.setItem('currentUser', JSON.stringify(userData));
     dispatch({ type: UPDATE_USER, payload: userData });
   }, []);
 

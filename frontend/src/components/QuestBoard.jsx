@@ -247,7 +247,13 @@ const QuestBoard = () => {
         )}
       </div>
       <div className="w-1/3 max-w-sm p-4 bg-black bg-opacity-50">
-        {currentUser && <QuestLog quests={quests} />}
+        {currentUser && (
+          <QuestLog
+            quests={quests}
+            onComplete={(quest) => setCompletingQuest(quest)}
+            onAbandon={handleAbandonQuest}
+          />
+        )}
       </div>
     </div>
   );
