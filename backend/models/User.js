@@ -48,6 +48,7 @@ const DailyQuestSchema = new Schema({
   description: { type: String, required: true },
   primaryStat: { type: String, enum: ["upperBodyStrength", "lowerBodyStrength", "coreStrength", "cardioEndurance", "flexibilityMobility", "powerExplosiveness"], required: true },
   exercises: [{
+    exerciseId: { type: String },
     name: { type: String, required: true },
     sets: { type: Number, required: true },
     reps: { type: Number },
@@ -58,6 +59,7 @@ const DailyQuestSchema = new Schema({
   expiresAt: { type: Date, required: true },
   status: { type: String, enum: ["available", "accepted", "completed", "abandoned", "expired"], default: "available" },
   userLoggedExercises: [{
+    exerciseId: { type: String },
     name: { type: String, required: true },
     sets: { type: Number, required: true },
     reps: { type: Number },
