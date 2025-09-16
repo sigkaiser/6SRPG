@@ -4,10 +4,11 @@ import { createPortal } from 'react-dom';
 const QuestCompletionForm = ({ quest, onSubmit, onClose }) => {
   const [loggedExercises, setLoggedExercises] = useState(
     quest.exercises.map(ex => ({
+      exerciseId: ex.exerciseId || null,
       name: ex.name,
       sets: ex.sets,
-      reps: ex.reps || null,
-      duration: ex.duration || null,
+      reps: ex.reps ?? null,
+      duration: ex.duration ?? null,
       weight: null,
     }))
   );

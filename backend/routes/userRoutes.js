@@ -369,11 +369,69 @@ const handleQuestAction = async (req, res, newStatus) => {
     quest.status = newStatus;
 
     if (newStatus === 'completed' && Array.isArray(loggedExercises)) {
-      quest.userLoggedExercises = loggedExercises;
+      const questExerciseById = new Map();
+      const questExerciseByName = new Map();
+
+      for (const questExercise of quest.exercises || []) {
+        if (questExercise.exerciseId) {
+          questExerciseById.set(questExercise.exerciseId, questExercise);
+        }
+        questExerciseByName.set((questExercise.name || '').toLowerCase(), questExercise);
+      }
+
+      const parsePositiveInt = (value, fallback = null) => {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric) || numeric <= 0) {
+          return fallback ?? null;
+        }
+        return Math.round(numeric);
+      };
+
+      const parseNonNegativeNumber = (value, fallback = null) => {
+        if (value === undefined || value === null || value === '') {
+          return fallback ?? null;
+        }
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric) || numeric < 0) {
+          return fallback ?? null;
+        }
+        return Math.round(numeric * 100) / 100;
+      };
+
+      const sanitizedLoggedExercises = [];
+
+      for (const logged of loggedExercises) {
+        if (!logged) continue;
+
+        const questExercise =
+          (logged.exerciseId && questExerciseById.get(logged.exerciseId)) ||
+          questExerciseByName.get((logged.name || '').toLowerCase());
+
+        if (!questExercise) continue;
+
+        const sanitized = {
+          exerciseId: questExercise.exerciseId || logged.exerciseId || null,
+          name: questExercise.name,
+          sets: parsePositiveInt(logged.sets, questExercise.sets ?? 1),
+          reps: parsePositiveInt(logged.reps, questExercise.reps ?? null),
+          duration: parsePositiveInt(logged.duration, questExercise.duration ?? null),
+          weight: parseNonNegativeNumber(logged.weight, null),
+        };
+
+        if (sanitized.reps === null) delete sanitized.reps;
+        if (sanitized.duration === null) delete sanitized.duration;
+        if (sanitized.weight === null) delete sanitized.weight;
+
+        sanitizedLoggedExercises.push(sanitized);
+      }
+
+      quest.userLoggedExercises = sanitizedLoggedExercises;
 
       try {
         const exerciseDbData = await statCalculationService.fetchExerciseDb();
         const statWeights = await statCalculationService.loadStatWeights();
+        const exerciseDbById = new Map(exerciseDbData.map(e => [e.id, e]));
+        const exerciseDbByName = new Map(exerciseDbData.map(e => [e.name.toLowerCase(), e]));
 
         const categorize = (cat) => {
           const c = (cat || '').toLowerCase();
@@ -391,16 +449,22 @@ const handleQuestAction = async (req, res, newStatus) => {
 
         const newExerciseEntries = [];
 
-        for (const ex of loggedExercises) {
-          const metadata = exerciseDbData.find(e => e.name.toLowerCase() === ex.name.toLowerCase());
+        for (const ex of sanitizedLoggedExercises) {
+          const metadata =
+            (ex.exerciseId && exerciseDbById.get(ex.exerciseId)) ||
+            exerciseDbByName.get(ex.name.toLowerCase());
+
           if (!metadata) continue;
+
+          ex.exerciseId = metadata.id;
           const category = categorize(metadata.category);
-          const entry = { date: new Date(), type: ex.name, category };
+          const entry = { date: new Date(), type: metadata.name, category };
+          const setsCount = Math.max(1, ex.sets || 1);
 
           if (category === 'Lift') {
-            entry.sets = Array.from({ length: ex.sets }, () => ({ reps: ex.reps, weight: ex.weight }));
+            entry.sets = Array.from({ length: setsCount }, () => ({ reps: ex.reps ?? null, weight: ex.weight ?? null }));
           } else if (category === 'Stretch') {
-            entry.sets = Array.from({ length: ex.sets }, () => ({ duration: ex.duration }));
+            entry.sets = Array.from({ length: setsCount }, () => ({ duration: ex.duration ?? null }));
           } else if (category === 'Cardio') {
             entry.duration = ex.duration ? ex.duration / 60 : 0; // seconds to minutes
           }
