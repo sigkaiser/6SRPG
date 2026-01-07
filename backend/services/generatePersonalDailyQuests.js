@@ -381,13 +381,24 @@ const sanitizeExerciseFromModel = (exercise, allowedExerciseMap) => {
     return null;
   }
 
-  const exerciseId = exercise.exerciseId;
+  let exerciseId = exercise.exerciseId;
+  let allowed = null;
 
-  if (!exerciseId || typeof exerciseId !== 'string') {
-    return null;
+  if (exerciseId && typeof exerciseId === 'string') {
+    allowed = allowedExerciseMap.get(exerciseId);
   }
 
-  const allowed = allowedExerciseMap.get(exerciseId);
+  // Fallback: search by name if ID lookup failed
+  if (!allowed && exercise.name && typeof exercise.name === 'string') {
+    const targetName = exercise.name.trim().toLowerCase();
+    for (const item of allowedExerciseMap.values()) {
+      if (item.exercise.name.toLowerCase() === targetName) {
+        allowed = item;
+        exerciseId = item.exercise.id;
+        break;
+      }
+    }
+  }
 
   if (!allowed) {
     return null;
@@ -536,23 +547,21 @@ const generatePersonalDailyQuests = async (user) => {
         continue;
       }
 
-      let questIsValid = true;
       const validatedExercises = [];
 
       for (const exercise of quest.exercises) {
         const sanitized = sanitizeExerciseFromModel(exercise, allowedExerciseMap);
 
         if (!sanitized) {
-          questIsValid = false;
           console.log(`Rejected exercise due to validation failure: ${JSON.stringify(exercise)}`);
-          break;
+          continue;
         }
 
         validatedExercises.push(sanitized);
       }
 
-      if (!questIsValid) {
-        console.log(`Discarding quest "${quest.title}" because one or more exercises were invalid.`);
+      if (validatedExercises.length === 0) {
+        console.log(`Discarding quest "${quest.title}" because all exercises were invalid.`);
         continue;
       }
 
