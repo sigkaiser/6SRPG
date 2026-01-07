@@ -140,7 +140,11 @@ const filterExercisesForUser = (preferences = {}) => {
       return false;
     }
 
-    if (excludedEquipmentSet.size && exercise.equipment && excludedEquipmentSet.has(exercise.equipment.toLowerCase())) {
+    // Normalize equipment. If null/undefined, treat as 'body only' for filtering purposes
+    // if 'body only' is explicitly excluded. Or keep it simple: check if the value exists.
+    // However, if the user excludes 'body only', we should probably exclude null equipment exercises too.
+    const equipment = (exercise.equipment || 'body only').toLowerCase();
+    if (excludedEquipmentSet.size && excludedEquipmentSet.has(equipment)) {
       return false;
     }
 
@@ -154,10 +158,27 @@ const filterExercisesForUser = (preferences = {}) => {
     return true;
   });
 
+  // Fallback Strategy:
+  // 1. If empty, drop muscle filters but keep equipment and exercise name exclusions.
+  if (!filtered.length) {
+    filtered = exercises.filter((exercise) => {
+      if (excludedExerciseNames.has(exercise.name.toLowerCase())) {
+        return false;
+      }
+      const equipment = (exercise.equipment || 'body only').toLowerCase();
+      if (excludedEquipmentSet.size && excludedEquipmentSet.has(equipment)) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  // 2. If still empty, drop equipment filters but keep exercise name exclusions.
   if (!filtered.length) {
     filtered = exercises.filter((exercise) => !excludedExerciseNames.has(exercise.name.toLowerCase()));
   }
 
+  // 3. If still empty, return all exercises (last resort).
   if (!filtered.length) {
     filtered = [...exercises];
   }
@@ -381,13 +402,18 @@ const sanitizeExerciseFromModel = (exercise, allowedExerciseMap) => {
   const reps = exercise.reps !== undefined ? parsePositiveInteger(exercise.reps) : null;
   const duration = exercise.duration !== undefined ? parsePositiveInteger(exercise.duration) : null;
   const category = (allowed.exercise.category || '').toLowerCase();
-  const requiresDuration = category === 'cardio' || category === 'stretching';
+  const force = (allowed.exercise.force || '').toLowerCase();
+  const isStatic = force === 'static';
+  const requiresDuration = category === 'cardio' || category === 'stretching' || isStatic;
 
   if (requiresDuration) {
     if (duration === null) {
       return null;
     }
-  } else if (reps === null) {
+  } else if (reps === null && duration === null) {
+    // If it's a strength exercise (not requiring duration), we typically expect reps.
+    // However, some might be time-based. We allow either reps OR duration, or both.
+    // But at least one must be present.
     return null;
   }
 
