@@ -140,7 +140,11 @@ const filterExercisesForUser = (preferences = {}) => {
       return false;
     }
 
-    if (excludedEquipmentSet.size && exercise.equipment && excludedEquipmentSet.has(exercise.equipment.toLowerCase())) {
+    // Normalize equipment. If null/undefined, treat as 'body only' for filtering purposes
+    // if 'body only' is explicitly excluded. Or keep it simple: check if the value exists.
+    // However, if the user excludes 'body only', we should probably exclude null equipment exercises too.
+    const equipment = (exercise.equipment || 'body only').toLowerCase();
+    if (excludedEquipmentSet.size && excludedEquipmentSet.has(equipment)) {
       return false;
     }
 
@@ -154,10 +158,27 @@ const filterExercisesForUser = (preferences = {}) => {
     return true;
   });
 
+  // Fallback Strategy:
+  // 1. If empty, drop muscle filters but keep equipment and exercise name exclusions.
+  if (!filtered.length) {
+    filtered = exercises.filter((exercise) => {
+      if (excludedExerciseNames.has(exercise.name.toLowerCase())) {
+        return false;
+      }
+      const equipment = (exercise.equipment || 'body only').toLowerCase();
+      if (excludedEquipmentSet.size && excludedEquipmentSet.has(equipment)) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  // 2. If still empty, drop equipment filters but keep exercise name exclusions.
   if (!filtered.length) {
     filtered = exercises.filter((exercise) => !excludedExerciseNames.has(exercise.name.toLowerCase()));
   }
 
+  // 3. If still empty, return all exercises (last resort).
   if (!filtered.length) {
     filtered = [...exercises];
   }
@@ -360,13 +381,24 @@ const sanitizeExerciseFromModel = (exercise, allowedExerciseMap) => {
     return null;
   }
 
-  const exerciseId = exercise.exerciseId;
+  let exerciseId = exercise.exerciseId;
+  let allowed = null;
 
-  if (!exerciseId || typeof exerciseId !== 'string') {
-    return null;
+  if (exerciseId && typeof exerciseId === 'string') {
+    allowed = allowedExerciseMap.get(exerciseId);
   }
 
-  const allowed = allowedExerciseMap.get(exerciseId);
+  // Fallback: search by name if ID lookup failed
+  if (!allowed && exercise.name && typeof exercise.name === 'string') {
+    const targetName = exercise.name.trim().toLowerCase();
+    for (const item of allowedExerciseMap.values()) {
+      if (item.exercise.name.toLowerCase() === targetName) {
+        allowed = item;
+        exerciseId = item.exercise.id;
+        break;
+      }
+    }
+  }
 
   if (!allowed) {
     return null;
@@ -381,13 +413,18 @@ const sanitizeExerciseFromModel = (exercise, allowedExerciseMap) => {
   const reps = exercise.reps !== undefined ? parsePositiveInteger(exercise.reps) : null;
   const duration = exercise.duration !== undefined ? parsePositiveInteger(exercise.duration) : null;
   const category = (allowed.exercise.category || '').toLowerCase();
-  const requiresDuration = category === 'cardio' || category === 'stretching';
+  const force = (allowed.exercise.force || '').toLowerCase();
+  const isStatic = force === 'static';
+  const requiresDuration = category === 'cardio' || category === 'stretching' || isStatic;
 
   if (requiresDuration) {
     if (duration === null) {
       return null;
     }
-  } else if (reps === null) {
+  } else if (reps === null && duration === null) {
+    // If it's a strength exercise (not requiring duration), we typically expect reps.
+    // However, some might be time-based. We allow either reps OR duration, or both.
+    // But at least one must be present.
     return null;
   }
 
@@ -510,23 +547,21 @@ const generatePersonalDailyQuests = async (user) => {
         continue;
       }
 
-      let questIsValid = true;
       const validatedExercises = [];
 
       for (const exercise of quest.exercises) {
         const sanitized = sanitizeExerciseFromModel(exercise, allowedExerciseMap);
 
         if (!sanitized) {
-          questIsValid = false;
           console.log(`Rejected exercise due to validation failure: ${JSON.stringify(exercise)}`);
-          break;
+          continue;
         }
 
         validatedExercises.push(sanitized);
       }
 
-      if (!questIsValid) {
-        console.log(`Discarding quest "${quest.title}" because one or more exercises were invalid.`);
+      if (validatedExercises.length === 0) {
+        console.log(`Discarding quest "${quest.title}" because all exercises were invalid.`);
         continue;
       }
 
