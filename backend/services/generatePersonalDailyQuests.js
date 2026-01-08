@@ -1,6 +1,7 @@
 const OpenAI = require('openai');
 const { v4: uuidv4 } = require('uuid');
 const exercises = require('../data/exercises.json');
+const Quest = require('../models/Quest'); // Import Quest model
 
 const DEFAULT_STATS_ORDER = [
   'upperBodyStrength',
@@ -140,9 +141,6 @@ const filterExercisesForUser = (preferences = {}) => {
       return false;
     }
 
-    // Normalize equipment. If null/undefined, treat as 'body only' for filtering purposes
-    // if 'body only' is explicitly excluded. Or keep it simple: check if the value exists.
-    // However, if the user excludes 'body only', we should probably exclude null equipment exercises too.
     const equipment = (exercise.equipment || 'body only').toLowerCase();
     if (excludedEquipmentSet.size && excludedEquipmentSet.has(equipment)) {
       return false;
@@ -158,8 +156,6 @@ const filterExercisesForUser = (preferences = {}) => {
     return true;
   });
 
-  // Fallback Strategy:
-  // 1. If empty, drop muscle filters but keep equipment and exercise name exclusions.
   if (!filtered.length) {
     filtered = exercises.filter((exercise) => {
       if (excludedExerciseNames.has(exercise.name.toLowerCase())) {
@@ -173,12 +169,10 @@ const filterExercisesForUser = (preferences = {}) => {
     });
   }
 
-  // 2. If still empty, drop equipment filters but keep exercise name exclusions.
   if (!filtered.length) {
     filtered = exercises.filter((exercise) => !excludedExerciseNames.has(exercise.name.toLowerCase()));
   }
 
-  // 3. If still empty, return all exercises (last resort).
   if (!filtered.length) {
     filtered = [...exercises];
   }
@@ -388,7 +382,6 @@ const sanitizeExerciseFromModel = (exercise, allowedExerciseMap) => {
     allowed = allowedExerciseMap.get(exerciseId);
   }
 
-  // Fallback: search by name if ID lookup failed
   if (!allowed && exercise.name && typeof exercise.name === 'string') {
     const targetName = exercise.name.trim().toLowerCase();
     for (const item of allowedExerciseMap.values()) {
@@ -422,9 +415,6 @@ const sanitizeExerciseFromModel = (exercise, allowedExerciseMap) => {
       return null;
     }
   } else if (reps === null && duration === null) {
-    // If it's a strength exercise (not requiring duration), we typically expect reps.
-    // However, some might be time-based. We allow either reps OR duration, or both.
-    // But at least one must be present.
     return null;
   }
 
@@ -455,7 +445,8 @@ const sanitizeExerciseFromModel = (exercise, allowedExerciseMap) => {
   return sanitized;
 };
 
-const generatePersonalDailyQuests = async (user) => {
+// Updated signature to accept separated models
+const generatePersonalDailyQuests = async (user, stats, exerciseHistory) => {
   console.log('--- Generating Personal Daily Quests ---');
 
   if (!process.env.OPENAI_API_KEY) {
@@ -467,7 +458,7 @@ const generatePersonalDailyQuests = async (user) => {
     apiKey: process.env.OPENAI_API_KEY,
   });
 
-  const { preferences = {}, exerciseHistory = [], stats = {} } = user;
+  const preferences = user.preferences || {};
   const {
     trainingGoals = [],
     excludedMuscles = [],
@@ -476,11 +467,17 @@ const generatePersonalDailyQuests = async (user) => {
     customInstructions = '',
   } = preferences;
 
-  const recentExerciseHistory = exerciseHistory.filter((entry) => {
+  // Use the history array from the ExerciseHistory document
+  const historyArray = exerciseHistory ? exerciseHistory.history : [];
+
+  const recentExerciseHistory = historyArray.filter((entry) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     return new Date(entry.date) > thirtyDaysAgo;
   });
+
+  // Extract stats object from PlayerStats document
+  const statsObj = stats ? stats.stats : {};
 
   const filteredExercises = filterExercisesForUser(preferences);
   const priorityStats = determinePriorityStats(trainingGoals);
@@ -497,7 +494,7 @@ const generatePersonalDailyQuests = async (user) => {
     excludedExercises,
     customInstructions,
     recentExerciseHistory,
-    stats,
+    stats: statsObj,
     allowedExercisesSnippet,
     priorityStats,
   });
@@ -569,9 +566,11 @@ const generatePersonalDailyQuests = async (user) => {
       const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
       validatedQuests.push({
+        user: user._id, // Assign to user
         ...quest,
         exercises: validatedExercises,
         questId: uuidv4(),
+        type: 'Daily', // Explicitly mark as Daily
         createdAt: now,
         expiresAt,
         status: 'available',
@@ -581,14 +580,18 @@ const generatePersonalDailyQuests = async (user) => {
     console.log('--- Validated Quests ---');
     console.log(JSON.stringify(validatedQuests, null, 2));
 
-    const now = new Date();
-    const questsToKeep = user.dailyQuests.filter(
-      (quest) => quest.status !== 'available' && quest.expiresAt > now
+    // Mark old available daily quests as expired
+    await Quest.updateMany(
+      { user: user._id, type: 'Daily', status: 'available' },
+      { $set: { status: 'expired' } }
     );
-    user.dailyQuests = [...questsToKeep, ...validatedQuests];
-    user.markModified('dailyQuests');
-    await user.save();
-    console.log('--- Quests saved to user ---');
+    console.log('--- Old available daily quests marked as expired ---');
+
+    // Insert new quests
+    if (validatedQuests.length > 0) {
+      await Quest.insertMany(validatedQuests);
+    }
+    console.log('--- New quests saved to Quest collection ---');
 
     return validatedQuests;
   } catch (error) {

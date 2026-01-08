@@ -1,12 +1,62 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
+const PlayerStats = require('../models/PlayerStats');
+const ExerciseHistory = require('../models/ExerciseHistory');
+const Inventory = require('../models/Inventory');
+const Quest = require('../models/Quest');
 
 const router = express.Router();
+
+// Helper to aggregate user data
+async function getFullUser(userId) {
+  const user = await User.findById(userId).lean();
+  if (!user) return null;
+
+  const [playerStats, exerciseHistory, inventory, quests] = await Promise.all([
+    PlayerStats.findOne({ user: userId }).lean(),
+    ExerciseHistory.findOne({ user: userId }).lean(),
+    Inventory.findOne({ user: userId }).lean(),
+    Quest.find({ user: userId }).lean()
+  ]);
+
+  // Aggregate Quests
+  const dailyQuests = quests.filter(q => q.type === 'Daily');
+
+  // Logic for legacy activeQuests (Main/Side quests only)
+  // Ensure we don't include Daily quests here to avoid duplication
+  const activeQuests = quests
+    .filter(q => q.type !== 'Daily' && (q.status === 'accepted' || q.status === 'active'))
+    .map(q => ({
+      ...q,
+      name: q.title // Map title back to name for legacy frontend compatibility
+    }));
+
+  const completedQuests = quests
+    .filter(q => q.status === 'completed')
+    .map(q => ({
+      ...q,
+      name: q.title // Map title back to name for legacy frontend compatibility
+    }));
+
+  // Merge into legacy structure
+  return {
+    ...user,
+    ...playerStats, // level, experience, stats, levelProgress, titles, achievements
+    exerciseHistory: exerciseHistory ? exerciseHistory.history : [],
+    inventory: inventory ? inventory.items : [],
+    equippedItems: inventory ? inventory.equippedItems : [],
+    dailyQuests,
+    activeQuests,
+    completedQuests
+  };
+}
+
 
 // POST /api/users/register
 router.post('/register', async (req, res) => {
   const { username, email, password } = req.body;
+  let newUser = null;
 
   try {
     // Check for existing user
@@ -17,11 +67,37 @@ router.post('/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Create new user
-    const newUser = new User({ username, email, passwordHash });
+    newUser = new User({ username, email, passwordHash });
     await newUser.save();
+
+    // Create dependent documents
+    const userId = newUser._id;
+
+    // Create child documents sequentially. If one fails, catch block triggers cleanup.
+    const playerStats = new PlayerStats({ user: userId });
+    await playerStats.save();
+
+    const exerciseHistory = new ExerciseHistory({ user: userId });
+    await exerciseHistory.save();
+
+    const inventory = new Inventory({ user: userId });
+    await inventory.save();
 
     res.status(201).json({ message: 'User registered successfully' });
   } catch (err) {
+    console.error('Registration error:', err);
+    // Rollback: if user was created but subsequent steps failed, delete the user
+    if (newUser && newUser._id) {
+        try {
+            await User.findByIdAndDelete(newUser._id);
+            await PlayerStats.deleteOne({ user: newUser._id });
+            await ExerciseHistory.deleteOne({ user: newUser._id });
+            await Inventory.deleteOne({ user: newUser._id });
+            console.log(`Rolled back partial registration for user ${newUser.email}`);
+        } catch (cleanupErr) {
+            console.error('Critical error during registration rollback:', cleanupErr);
+        }
+    }
     res.status(500).json({ error: 'Registration failed' });
   }
 });
@@ -37,8 +113,11 @@ router.post('/login', async (req, res) => {
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
-    res.status(200).json({ message: 'Login successful', user: user.toJSON() });
+    const fullUser = await getFullUser(user._id);
+
+    res.status(200).json({ message: 'Login successful', user: fullUser });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Login failed' });
   }
 });
@@ -47,11 +126,18 @@ router.post('/login', async (req, res) => {
 router.get('/:id', async (req, res) => {
   console.log(`Fetching data for user ${req.params.id}...`);
   try {
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    const fullUser = await getFullUser(req.params.id);
+    if (!fullUser) return res.status(404).json({ error: 'User not found' });
 
-    res.json(user.toJSON());
+    // Add id field for frontend compatibility if lean() removed it (lean retains _id usually)
+    fullUser.id = fullUser._id;
+    delete fullUser.passwordHash;
+    delete fullUser._id;
+    delete fullUser.__v;
+
+    res.json(fullUser);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Could not fetch user data' });
   }
 });
@@ -61,20 +147,29 @@ const generatePersonalDailyQuests = require('../services/generatePersonalDailyQu
 // Route to generate daily quests for a user
 router.post('/:userId/daily-quests', async (req, res) => {
     try {
-        const user = await User.findById(req.params.userId);
+        const userId = req.params.userId;
+        const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const generatedQuests = await generatePersonalDailyQuests(user);
-        // After generating, find the user again to get the updated document
-        const updatedUser = await User.findById(req.params.userId);
+        const playerStats = await PlayerStats.findOne({ user: userId });
+        const exerciseHistory = await ExerciseHistory.findOne({ user: userId });
+
+        const generatedQuests = await generatePersonalDailyQuests(user, playerStats, exerciseHistory);
+
+        // Return full updated user object
+        const updatedFullUser = await getFullUser(userId);
+        updatedFullUser.id = updatedFullUser._id;
+        delete updatedFullUser.passwordHash;
+        delete updatedFullUser._id;
+
         res.status(201).json({
             success: true,
             message: 'Daily quests generated successfully.',
             generatedQuestsCount: generatedQuests.length,
             generatedQuests,
-            user: updatedUser.toJSON(),
+            user: updatedFullUser,
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -90,12 +185,20 @@ const { TRACKED_STATS } = require('../services/statCalculationService'); // Impo
 router.post('/:id/exercises', async (req, res) => {
   console.log(`[XP LOG] Received request to log exercise for user ID: ${req.params.id}`);
   console.log(`[XP LOG] Request body:`, req.body);
+  const userId = req.params.id;
+
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(userId);
     if (!user) {
-      console.error(`[XP LOG] User not found for ID: ${req.params.id}`);
+      console.error(`[XP LOG] User not found for ID: ${userId}`);
       return res.status(404).json({ error: 'User not found' });
     }
+
+    const exerciseHistoryDoc = await ExerciseHistory.findOne({ user: userId });
+    if (!exerciseHistoryDoc) return res.status(404).json({ error: 'Exercise History not found' });
+
+    const playerStatsDoc = await PlayerStats.findOne({ user: userId });
+    if (!playerStatsDoc) return res.status(404).json({ error: 'Player Stats not found' });
 
     const { type, category, sets, duration, date } = req.body;
 
@@ -125,37 +228,42 @@ router.post('/:id/exercises', async (req, res) => {
       return res.status(400).json({ error: 'Invalid exercise category.' });
     }
 
-    user.exerciseHistory.push(loggedExercise);
-    // Don't save yet, will save after stat updates
+    // Push to history
+    exerciseHistoryDoc.history.push(loggedExercise);
+    // await exerciseHistoryDoc.save(); // Don't save yet, wait for stats (or save now? logic said wait)
 
     // --- Begin Stat and XP Processing ---
     console.log('[XP LOG] Starting stat and XP processing.');
     const exerciseDbData = await statCalculationService.fetchExerciseDb();
     if (!exerciseDbData || exerciseDbData.length === 0) {
         console.error('[XP LOG] Exercise database is unavailable or empty.');
+        // Save history anyway
+        await exerciseHistoryDoc.save();
         return res.status(503).json({ error: 'Exercise database is currently unavailable or empty. Exercise logged but stats not updated.' });
     }
 
     const statWeights = await statCalculationService.loadStatWeights();
     if (!statWeights) {
         console.error('[XP LOG] Stat weights configuration is unavailable.');
+        await exerciseHistoryDoc.save();
         return res.status(503).json({ error: 'Stat weights configuration is currently unavailable. Exercise logged but stats not updated.' });
     }
 
     // 1. Calculate Potential Stats (and get strongest lifts)
     console.log('[XP LOG] Calculating potential stats.');
-    const potentialResults = await statCalculationService.calculatePotentialStats(user.exerciseHistory, exerciseDbData, statWeights);
+    // Pass the raw history array
+    const potentialResults = await statCalculationService.calculatePotentialStats(exerciseHistoryDoc.history, exerciseDbData, statWeights);
     const { strongestLiftsByExercise, detailedContributions, ...newPotentials } = potentialResults;
     console.log('[XP LOG] Potential stats calculated:', newPotentials);
 
-    // Initialize user.stats if it's not already there (should be by schema defaults, but good practice)
-    if (!user.stats) {
-        console.log('[XP LOG] Initializing user.stats object.');
-        user.stats = {}; // This should align with new schema structure
+    // Initialize stats if missing (shouldn't be)
+    if (!playerStatsDoc.stats) {
+        console.log('[XP LOG] Initializing playerStatsDoc.stats object.');
+        playerStatsDoc.stats = {};
     }
     TRACKED_STATS.forEach(statName => {
-        if (!user.stats[statName]) {
-            user.stats[statName] = { current: null, potential: null, xp: 0, xpToNext: 0};
+        if (!playerStatsDoc.stats[statName]) {
+            playerStatsDoc.stats[statName] = { current: null, potential: null, xp: 0, xpToNext: 0};
         }
     });
 
@@ -163,7 +271,7 @@ router.post('/:id/exercises', async (req, res) => {
     // 2. Update user's potential stats and initialize current/xp if new
     for (const statName of TRACKED_STATS) { // Iterate using TRACKED_STATS from service
         const calculatedPotential = newPotentials[statName];
-        const userStat = user.stats[statName];
+        const userStat = playerStatsDoc.stats[statName];
 
         if (calculatedPotential !== null) { // Potential is calculable (>= 5 exercises)
             if (userStat.potential === null) { // First time this stat's potential is calculated
@@ -197,17 +305,27 @@ router.post('/:id/exercises', async (req, res) => {
     // 4. Apply XP and Handle Level Ups
     if (Object.keys(awardedXpMap).length > 0) {
         console.log('[XP LOG] Applying XP and handling level ups.');
-        user.stats = statCalculationService.applyXpAndLevelUp(user.stats, awardedXpMap);
-        console.log('[XP LOG] User stats after applying XP:', user.stats);
+        playerStatsDoc.stats = statCalculationService.applyXpAndLevelUp(playerStatsDoc.stats, awardedXpMap);
+        console.log('[XP LOG] User stats after applying XP:', playerStatsDoc.stats);
     }
 
-    user.markModified('stats');
-    await user.save();
+    playerStatsDoc.markModified('stats');
+
+    // Save both documents
+    await exerciseHistoryDoc.save();
+    await playerStatsDoc.save();
+
     // --- End Stat and XP Processing ---
+
+    // Fetch full user for response
+    const fullUser = await getFullUser(userId);
+    fullUser.id = fullUser._id;
+    delete fullUser.passwordHash;
+    delete fullUser._id;
 
     res.status(200).json({
       message: "Exercise logged successfully!",
-      user: user.toJSON()
+      user: fullUser
     });
 
   } catch (err) {
@@ -235,6 +353,9 @@ router.post('/:userId/recalculate-stats', async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
+        const exerciseHistoryDoc = await ExerciseHistory.findOne({ user: userId });
+        const playerStatsDoc = await PlayerStats.findOne({ user: userId });
+
         const exerciseDbData = await statCalculationService.fetchExerciseDb();
         if (!exerciseDbData || exerciseDbData.length === 0) {
             return res.status(503).json({ message: 'Exercise database is currently unavailable or empty.' });
@@ -245,14 +366,14 @@ router.post('/:userId/recalculate-stats', async (req, res) => {
         }
 
         // Recalculate Potentials
-        const potentialResults = await statCalculationService.calculatePotentialStats(user.exerciseHistory, exerciseDbData, statWeights);
+        const potentialResults = await statCalculationService.calculatePotentialStats(exerciseHistoryDoc.history, exerciseDbData, statWeights);
         const { detailedContributions, ...newPotentials } = potentialResults; // strongestLiftsByExercise not directly used here unless we reset XP
 
-        if (!user.stats) user.stats = {}; // Should be initialized by schema
+        if (!playerStatsDoc.stats) playerStatsDoc.stats = {}; // Should be initialized by schema
 
         for (const statName of TRACKED_STATS) {
             const calculatedPotential = newPotentials[statName];
-            const userStat = user.stats[statName] || { current: null, potential: null, xp: 0, xpToNext: 0 }; // Ensure stat object exists
+            const userStat = playerStatsDoc.stats[statName] || { current: null, potential: null, xp: 0, xpToNext: 0 }; // Ensure stat object exists
 
             if (calculatedPotential !== null) {
                 // If potential changes, current model is that 'current' stat and 'xp' are NOT reset.
@@ -272,19 +393,23 @@ router.post('/:userId/recalculate-stats', async (req, res) => {
                 userStat.xp = 0;
                 userStat.xpToNext = 0;
             }
-            user.stats[statName] = userStat;
+            playerStatsDoc.stats[statName] = userStat;
         }
 
         // Note: This recalculate route does NOT award new XP or re-evaluate XP based on history.
         // It primarily recalculates and updates potentials, and initializes current stats if they were null.
 
-        user.markModified('stats');
-        await user.save();
+        playerStatsDoc.markModified('stats');
+        await playerStatsDoc.save();
 
-        const userResponse = user.toJSON();
-        userResponse.detailedContributions = detailedContributions; // Add contributions from potential calculation
+        const fullUser = await getFullUser(userId);
+        fullUser.id = fullUser._id;
+        delete fullUser.passwordHash;
+        delete fullUser._id;
 
-        res.json({ message: 'Stats recalculated successfully.', user: userResponse });
+        fullUser.detailedContributions = detailedContributions; // Add contributions from potential calculation
+
+        res.json({ message: 'Stats recalculated successfully.', user: fullUser });
 
     } catch (error) {
         console.error(`Error recalculating stats for user ${userId}:`, error);
@@ -309,7 +434,12 @@ router.put('/:id/preferences', async (req, res) => {
     user.preferences = { ...user.preferences, ...req.body };
     await user.save();
 
-    res.status(200).json({ message: 'Preferences updated successfully', user: user.toJSON() });
+    const fullUser = await getFullUser(user._id);
+    fullUser.id = fullUser._id;
+    delete fullUser.passwordHash;
+    delete fullUser._id;
+
+    res.status(200).json({ message: 'Preferences updated successfully', user: fullUser });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update preferences' });
   }
@@ -325,15 +455,23 @@ router.delete('/:userId/exercises/:exerciseId', async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const exerciseIndex = user.exerciseHistory.findIndex(ex => ex._id.toString() === exerciseId);
+    const exerciseHistoryDoc = await ExerciseHistory.findOne({ user: userId });
+    if (!exerciseHistoryDoc) return res.status(404).json({ message: 'Exercise History not found' });
+
+    const exerciseIndex = exerciseHistoryDoc.history.findIndex(ex => ex._id.toString() === exerciseId);
     if (exerciseIndex === -1) {
       return res.status(404).json({ message: 'Exercise not found' });
     }
 
-    user.exerciseHistory.splice(exerciseIndex, 1);
-    await user.save();
+    exerciseHistoryDoc.history.splice(exerciseIndex, 1);
+    await exerciseHistoryDoc.save();
 
-    res.status(200).json({ success: true, message: 'Exercise deleted successfully', user: user.toJSON() });
+    const fullUser = await getFullUser(userId);
+    fullUser.id = fullUser._id;
+    delete fullUser.passwordHash;
+    delete fullUser._id;
+
+    res.status(200).json({ success: true, message: 'Exercise deleted successfully', user: fullUser });
   } catch (error) {
     console.error('Error deleting exercise:', error);
     res.status(500).json({ message: 'Failed to delete exercise' });
@@ -355,11 +493,10 @@ const handleQuestAction = async (req, res, newStatus) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    console.log(`[QUEST ACTION] Found user: ${user.username}. Checking for quest.`);
-    const questIdsInDb = user.dailyQuests.map(q => q.questId);
-    console.log(`[QUEST ACTION] Quest IDs in user's document:`, questIdsInDb);
+    // Find the specific quest document
+    // We search by questId (the uuid), assuming it is unique enough or compound with userId
+    const quest = await Quest.findOne({ user: userId, questId: questId });
 
-    const quest = user.dailyQuests.find(q => q.questId === questId);
     if (!quest) {
       console.error(`[QUEST ACTION] Quest with ID '${questId}' not found for user '${user.username}'.`);
       return res.status(404).json({ message: 'Quest not found' });
@@ -367,6 +504,12 @@ const handleQuestAction = async (req, res, newStatus) => {
 
     console.log(`[QUEST ACTION] Quest found: "${quest.title}". Updating status to '${newStatus}'.`);
     quest.status = newStatus;
+
+    if (newStatus === 'accepted') {
+        quest.startedAt = new Date();
+    } else if (newStatus === 'completed') {
+        quest.completedAt = new Date();
+    }
 
     if (newStatus === 'completed' && Array.isArray(loggedExercises)) {
       const questExerciseById = new Map();
@@ -428,6 +571,9 @@ const handleQuestAction = async (req, res, newStatus) => {
       quest.userLoggedExercises = sanitizedLoggedExercises;
 
       try {
+        const exerciseHistoryDoc = await ExerciseHistory.findOne({ user: userId });
+        const playerStatsDoc = await PlayerStats.findOne({ user: userId });
+
         const exerciseDbData = await statCalculationService.fetchExerciseDb();
         const statWeights = await statCalculationService.loadStatWeights();
         const exerciseDbById = new Map(exerciseDbData.map(e => [e.id, e]));
@@ -469,25 +615,26 @@ const handleQuestAction = async (req, res, newStatus) => {
             entry.duration = ex.duration ? ex.duration / 60 : 0; // seconds to minutes
           }
 
-          user.exerciseHistory.push(entry);
+          if (!exerciseHistoryDoc.history) exerciseHistoryDoc.history = [];
+          exerciseHistoryDoc.history.push(entry);
           newExerciseEntries.push({ entry, metadata });
         }
 
         if (newExerciseEntries.length > 0) {
           const potentialResults = await statCalculationService.calculatePotentialStats(
-            user.exerciseHistory,
+            exerciseHistoryDoc.history,
             exerciseDbData,
             statWeights
           );
           const { strongestLiftsByExercise, detailedContributions, ...newPotentials } = potentialResults;
 
-          if (!user.stats) user.stats = {};
+          if (!playerStatsDoc.stats) playerStatsDoc.stats = {};
           TRACKED_STATS.forEach(statName => {
-            if (!user.stats[statName]) {
-              user.stats[statName] = { current: null, potential: null, xp: 0, xpToNext: 0 };
+            if (!playerStatsDoc.stats[statName]) {
+              playerStatsDoc.stats[statName] = { current: null, potential: null, xp: 0, xpToNext: 0 };
             }
             const calculatedPotential = newPotentials[statName];
-            const userStat = user.stats[statName];
+            const userStat = playerStatsDoc.stats[statName];
             if (calculatedPotential !== null) {
               if (userStat.potential === null) {
                 userStat.potential = calculatedPotential;
@@ -512,19 +659,27 @@ const handleQuestAction = async (req, res, newStatus) => {
               statWeights,
               strongestLiftsByExercise
             );
-            user.stats = statCalculationService.applyXpAndLevelUp(user.stats, awardedXpMap);
+            playerStatsDoc.stats = statCalculationService.applyXpAndLevelUp(playerStatsDoc.stats, awardedXpMap);
           }
 
-          user.markModified('stats');
+          playerStatsDoc.markModified('stats');
+          await playerStatsDoc.save();
+          await exerciseHistoryDoc.save();
         }
       } catch (err) {
         console.error('[QUEST ACTION] Error processing completion exercises:', err);
       }
     }
 
-    await user.save();
+    await quest.save();
     console.log(`[QUEST ACTION] Quest status updated successfully.`);
-    res.status(200).json({ success: true, message: `Quest ${newStatus} successfully`, user: user.toJSON() });
+
+    const fullUser = await getFullUser(userId);
+    fullUser.id = fullUser._id;
+    delete fullUser.passwordHash;
+    delete fullUser._id;
+
+    res.status(200).json({ success: true, message: `Quest ${newStatus} successfully`, user: fullUser });
   } catch (error) {
     console.error(`Error updating quest to ${newStatus}:`, error);
     res.status(500).json({ message: `Failed to update quest status to ${newStatus}` });
