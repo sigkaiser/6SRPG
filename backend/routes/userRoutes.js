@@ -40,9 +40,11 @@ async function getFullUser(userId) {
     }));
 
   // Merge into legacy structure
+  // Explicitly preserve user._id as ...playerStats might overwrite it with its own _id
   return {
     ...user,
     ...playerStats, // level, experience, stats, levelProgress, titles, achievements
+    _id: user._id,
     exerciseHistory: exerciseHistory ? exerciseHistory.history : [],
     inventory: inventory ? inventory.items : [],
     equippedItems: inventory ? inventory.equippedItems : [],
