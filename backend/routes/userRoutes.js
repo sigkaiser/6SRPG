@@ -1,10 +1,12 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const PlayerStats = require('../models/PlayerStats');
 const ExerciseHistory = require('../models/ExerciseHistory');
 const Inventory = require('../models/Inventory');
 const Quest = require('../models/Quest');
+const authenticateToken = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
@@ -83,7 +85,10 @@ router.post('/register', async (req, res) => {
     const inventory = new Inventory({ user: userId });
     await inventory.save();
 
-    res.status(201).json({ message: 'User registered successfully' });
+    // Generate token
+    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET || 'dev_secret_do_not_use_in_prod', { expiresIn: '1h' });
+
+    res.status(201).json({ message: 'User registered successfully', token, user: { id: newUser._id, username: newUser.username, email: newUser.email } });
   } catch (err) {
     console.error('Registration error:', err);
     // Rollback: if user was created but subsequent steps failed, delete the user
@@ -115,7 +120,10 @@ router.post('/login', async (req, res) => {
 
     const fullUser = await getFullUser(user._id);
 
-    res.status(200).json({ message: 'Login successful', user: fullUser });
+    // Generate token
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || 'dev_secret_do_not_use_in_prod', { expiresIn: '1h' });
+
+    res.status(200).json({ message: 'Login successful', token, user: fullUser });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Login failed' });
@@ -123,8 +131,11 @@ router.post('/login', async (req, res) => {
 });
 
 // GET /api/users/:id
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   console.log(`Fetching data for user ${req.params.id}...`);
+  if (req.user.userId !== req.params.id) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
   try {
     const fullUser = await getFullUser(req.params.id);
     if (!fullUser) return res.status(404).json({ error: 'User not found' });
@@ -145,9 +156,12 @@ router.get('/:id', async (req, res) => {
 const generatePersonalDailyQuests = require('../services/generatePersonalDailyQuests');
 
 // Route to generate daily quests for a user
-router.post('/:userId/daily-quests', async (req, res) => {
+router.post('/:userId/daily-quests', authenticateToken, async (req, res) => {
     try {
         const userId = req.params.userId;
+        if (req.user.userId !== userId) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
@@ -182,10 +196,13 @@ const statCalculationService = require('../services/statCalculationService');
 const { TRACKED_STATS } = require('../services/statCalculationService'); // Import TRACKED_STATS if not already available through the service object
 
 // POST /api/users/:id/exercises - (Updated to include stat and XP processing)
-router.post('/:id/exercises', async (req, res) => {
+router.post('/:id/exercises', authenticateToken, async (req, res) => {
   console.log(`[XP LOG] Received request to log exercise for user ID: ${req.params.id}`);
   console.log(`[XP LOG] Request body:`, req.body);
   const userId = req.params.id;
+  if (req.user.userId !== userId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
 
   try {
     const user = await User.findById(userId);
@@ -345,8 +362,11 @@ router.post('/:id/exercises', async (req, res) => {
 // POST /api/users/:userId/recalculate-stats - Recalculate and update user stats
 // This route might need adjustments later if we want it to fully re-initialize current stats based on new potentials,
 // or it could be deprecated in favor of incremental updates. For now, let's ensure it uses the new structures.
-router.post('/:userId/recalculate-stats', async (req, res) => {
+router.post('/:userId/recalculate-stats', authenticateToken, async (req, res) => {
     const { userId } = req.params;
+    if (req.user.userId !== userId) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
     try {
         const user = await User.findById(userId);
         if (!user) {
@@ -424,7 +444,10 @@ router.post('/:userId/recalculate-stats', async (req, res) => {
 });
 
 // PUT /api/users/:id/preferences
-router.put('/:id/preferences', async (req, res) => {
+router.put('/:id/preferences', authenticateToken, async (req, res) => {
+  if (req.user.userId !== req.params.id) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
   try {
     const user = await User.findById(req.params.id);
     if (!user) {
@@ -445,9 +468,50 @@ router.put('/:id/preferences', async (req, res) => {
   }
 });
 
+// PATCH /api/users/:id/profile
+router.patch('/:id/profile', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    if (req.user.userId !== id) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    try {
+        const user = await User.findById(id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // Update preferences (goals, constraints)
+        if (req.body.trainingGoals) user.preferences.trainingGoals = req.body.trainingGoals;
+        if (req.body.excludedEquipment) user.preferences.excludedEquipment = req.body.excludedEquipment;
+        if (req.body.excludedMuscles) user.preferences.excludedMuscles = req.body.excludedMuscles;
+        if (req.body.excludedExercises) user.preferences.excludedExercises = req.body.excludedExercises;
+
+        // Also allow other preference updates if passed
+        if (req.body.preferences) {
+             user.preferences = { ...user.preferences, ...req.body.preferences };
+        }
+
+        await user.save();
+
+        const fullUser = await getFullUser(id);
+        fullUser.id = fullUser._id;
+        delete fullUser.passwordHash;
+        delete fullUser._id;
+        delete fullUser.__v;
+
+        res.status(200).json({ message: 'Profile updated successfully', user: fullUser });
+
+    } catch (err) {
+        console.error('Profile update error:', err);
+        res.status(500).json({ error: 'Failed to update profile' });
+    }
+});
+
 // DELETE /api/users/:userId/exercises/:exerciseId
-router.delete('/:userId/exercises/:exerciseId', async (req, res) => {
+router.delete('/:userId/exercises/:exerciseId', authenticateToken, async (req, res) => {
   const { userId, exerciseId } = req.params;
+  if (req.user.userId !== userId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
 
   try {
     const user = await User.findById(userId);
@@ -686,14 +750,29 @@ const handleQuestAction = async (req, res, newStatus) => {
   }
 };
 
+// Middleware for quest actions to ensure authentication
+const questActionMiddleware = (handler) => {
+    return (req, res) => {
+        // Authenticate first
+        authenticateToken(req, res, () => {
+             const { userId } = req.params;
+             if (req.user.userId !== userId) {
+                return res.status(403).json({ error: 'Forbidden' });
+             }
+             handler(req, res);
+        });
+    };
+};
+
+
 // POST /api/users/:userId/quests/:questId/accept
-router.post('/:userId/quests/:questId/accept', (req, res) => handleQuestAction(req, res, 'accepted'));
+router.post('/:userId/quests/:questId/accept', questActionMiddleware((req, res) => handleQuestAction(req, res, 'accepted')));
 
 // POST /api/users/:userId/quests/:questId/abandon
-router.post('/:userId/quests/:questId/abandon', (req, res) => handleQuestAction(req, res, 'abandoned'));
+router.post('/:userId/quests/:questId/abandon', questActionMiddleware((req, res) => handleQuestAction(req, res, 'abandoned')));
 
 // POST /api/users/:userId/quests/:questId/complete
-router.post('/:userId/quests/:questId/complete', (req, res) => handleQuestAction(req, res, 'completed'));
+router.post('/:userId/quests/:questId/complete', questActionMiddleware((req, res) => handleQuestAction(req, res, 'completed')));
 
 
 module.exports = router;
