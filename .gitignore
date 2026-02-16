@@ -44,3 +44,7 @@ Thumbs.db
 # Tailwind
 .tailwind-cache/
 
+# Playwright artifacts
+frontend/test-results/
+frontend/playwright-report/
+
