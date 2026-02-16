@@ -10,6 +10,13 @@ const authenticateToken = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
+function isE2eAuthHelperEnabled() {
+  const nodeEnv = String(process.env.NODE_ENV || '').trim().toLowerCase();
+  const helperFlag = String(process.env.ENABLE_E2E_AUTH_HELPER || '').trim().toLowerCase();
+  const helperEnabled = ['1', 'true', 'yes', 'on'].includes(helperFlag);
+  return nodeEnv === 'test' && helperEnabled;
+}
+
 // Helper to aggregate user data
 async function getFullUser(userId) {
   const user = await User.findById(userId).lean();
@@ -56,6 +63,113 @@ async function getFullUser(userId) {
   };
 }
 
+async function ensureUserResources(userId) {
+  const [playerStats, exerciseHistory, inventory] = await Promise.all([
+    PlayerStats.findOne({ user: userId }),
+    ExerciseHistory.findOne({ user: userId }),
+    Inventory.findOne({ user: userId }),
+  ]);
+
+  const createOps = [];
+  if (!playerStats) createOps.push(new PlayerStats({ user: userId }).save());
+  if (!exerciseHistory) createOps.push(new ExerciseHistory({ user: userId }).save());
+  if (!inventory) createOps.push(new Inventory({ user: userId }).save());
+
+  if (createOps.length > 0) {
+    await Promise.all(createOps);
+  }
+}
+
+function signToken(userId) {
+  const jwtSecret = authenticateToken.getJwtSecret();
+  if (!jwtSecret) {
+    return null;
+  }
+  return jwt.sign({ userId }, jwtSecret, { expiresIn: '1h' });
+}
+
+async function resolveBootstrapUsername(baseUsername, email) {
+  const existingForUsername = await User.findOne({ username: baseUsername });
+  if (!existingForUsername || existingForUsername.email === email) {
+    return baseUsername;
+  }
+
+  const emailPrefix = String(email).split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '');
+  if (emailPrefix) {
+    const emailBased = `e2e-${emailPrefix}`;
+    const existingEmailBased = await User.findOne({ username: emailBased });
+    if (!existingEmailBased || existingEmailBased.email === email) {
+      return emailBased;
+    }
+  }
+
+  const suffix = Date.now().toString().slice(-6);
+  return `${baseUsername}-${suffix}`;
+}
+
+// POST /api/users/e2e/bootstrap-session
+router.post('/e2e/bootstrap-session', async (req, res) => {
+  if (!isE2eAuthHelperEnabled()) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
+  const email = req.body?.email || process.env.E2E_TEST_EMAIL || 'e2e-user@example.com';
+  const username = req.body?.username || process.env.E2E_TEST_USERNAME || 'e2e-user';
+  const password = req.body?.password || process.env.E2E_TEST_PASSWORD || 'e2e-password-123';
+
+  if (!email || !username || !password) {
+    return res.status(400).json({ error: 'Missing required fields: email, username, password' });
+  }
+
+  try {
+    let user = await User.findOne({ email });
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    if (!user) {
+      const resolvedUsername = await resolveBootstrapUsername(username, email);
+      user = new User({ username: resolvedUsername, email, passwordHash });
+      await user.save();
+    } else {
+      // Keep test credentials deterministic for automation runs.
+      user.passwordHash = passwordHash;
+      if (!user.username) {
+        user.username = await resolveBootstrapUsername(username, email);
+      }
+      await user.save();
+    }
+
+    await ensureUserResources(user._id);
+
+    const fullUser = await getFullUser(user._id);
+    if (!fullUser) {
+      return res.status(500).json({ error: 'Failed to build user session payload' });
+    }
+
+    const token = signToken(user._id);
+    if (!token) {
+      return res.status(500).json({ error: 'Server authentication is misconfigured' });
+    }
+
+    fullUser.id = fullUser._id;
+    delete fullUser.passwordHash;
+    delete fullUser._id;
+    delete fullUser.__v;
+
+    return res.status(200).json({
+      success: true,
+      message: 'E2E session bootstrap complete',
+      token,
+      user: fullUser,
+    });
+  } catch (err) {
+    console.error('E2E bootstrap error:', err);
+    return res.status(500).json({
+      error: 'Failed to bootstrap e2e session',
+      detail: process.env.NODE_ENV === 'test' ? err.message : undefined,
+    });
+  }
+});
+
 
 // POST /api/users/register
 router.post('/register', async (req, res) => {
@@ -78,21 +192,13 @@ router.post('/register', async (req, res) => {
     const userId = newUser._id;
 
     // Create child documents sequentially. If one fails, catch block triggers cleanup.
-    const playerStats = new PlayerStats({ user: userId });
-    await playerStats.save();
-
-    const exerciseHistory = new ExerciseHistory({ user: userId });
-    await exerciseHistory.save();
-
-    const inventory = new Inventory({ user: userId });
-    await inventory.save();
+    await ensureUserResources(userId);
 
     // Generate token
-    const jwtSecret = authenticateToken.getJwtSecret();
-    if (!jwtSecret) {
+    const token = signToken(newUser._id);
+    if (!token) {
       return res.status(500).json({ error: 'Server authentication is misconfigured' });
     }
-    const token = jwt.sign({ userId: newUser._id }, jwtSecret, { expiresIn: '1h' });
 
     res.status(201).json({ message: 'User registered successfully', token, user: { id: newUser._id, username: newUser.username, email: newUser.email } });
   } catch (err) {
@@ -127,11 +233,10 @@ router.post('/login', async (req, res) => {
     const fullUser = await getFullUser(user._id);
 
     // Generate token
-    const jwtSecret = authenticateToken.getJwtSecret();
-    if (!jwtSecret) {
+    const token = signToken(user._id);
+    if (!token) {
       return res.status(500).json({ error: 'Server authentication is misconfigured' });
     }
-    const token = jwt.sign({ userId: user._id }, jwtSecret, { expiresIn: '1h' });
 
     res.status(200).json({ message: 'Login successful', token, user: fullUser });
   } catch (err) {
