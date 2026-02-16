@@ -21,6 +21,10 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET is required in production.');
 }
 
+if (process.env.NODE_ENV === 'production' && process.env.ENABLE_E2E_AUTH_HELPER === 'true') {
+  throw new Error('ENABLE_E2E_AUTH_HELPER must never be enabled in production.');
+}
+
 const corsOptions = {
   origin(origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
