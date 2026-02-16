@@ -1,0 +1,348 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "exercises.schema.json",
+  "title": "ExercisesDatabase",
+  "type": "array",
+  "items": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "exercise.schema.json",
+    "title": "Exercise",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "id",
+      "name",
+      "level",
+      "mechanic",
+      "equipment",
+      "primaryMuscles",
+      "secondaryMuscles",
+      "modality",
+      "movementPatterns",
+      "laterality",
+      "plane",
+      "primaryJoints",
+      "doseType",
+      "instructions",
+      "images"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1
+      },
+      "name": {
+        "type": "string",
+        "minLength": 1
+      },
+      "level": {
+        "type": "string",
+        "enum": [
+          "beginner",
+          "intermediate",
+          "expert"
+        ]
+      },
+      "mechanic": {
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "isolation",
+              "compound"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "equipment": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "ab_crunch_machine",
+            "ab_wheel",
+            "atlas_stone_trainer",
+            "atlas_stones",
+            "axle_bar",
+            "back_extension_machine",
+            "bands",
+            "barbell",
+            "battle_ropes",
+            "bench",
+            "bicep_curl_machine",
+            "body_only",
+            "bosu_ball",
+            "cable_stack",
+            "calf_raise_machine",
+            "car_deadlift_apparatus",
+            "chains",
+            "chest_press_machine",
+            "conans_wheel",
+            "cone",
+            "dip_belt",
+            "dip_station",
+            "dumbbell",
+            "elliptical",
+            "exercise_ball",
+            "ez_curl_bar",
+            "farmers_handles",
+            "foam_roll",
+            "glute_ham_developer",
+            "hack_squat_machine",
+            "hip_abductor_machine",
+            "hip_adductor_machine",
+            "hurdle",
+            "jump_rope",
+            "keg",
+            "kettlebell",
+            "landmine",
+            "lat_pulldown_machine",
+            "leg_curl_machine",
+            "leg_extension_machine",
+            "leg_press_machine",
+            "leverage_deadlift_machine",
+            "leverage_shrug_machine",
+            "log",
+            "lying_squat_machine",
+            "medicine_ball",
+            "pec_deck_machine",
+            "plyo_box",
+            "preacher_curl_machine",
+            "pull_up_bar",
+            "reverse_hyper_machine",
+            "rickshaw_frame",
+            "rings",
+            "roman_chair",
+            "rower",
+            "sandbag",
+            "seated_row_machine",
+            "shoulder_press_machine",
+            "slam_ball",
+            "sled",
+            "sledgehammer",
+            "smith_machine",
+            "squat_rack",
+            "squat_stands",
+            "stair_climber",
+            "stationary_bike",
+            "suspension_trainer",
+            "t_bar_row_machine",
+            "tire",
+            "trap_bar",
+            "treadmill",
+            "triceps_extension_machine",
+            "weight_plates",
+            "yoga_mat",
+            "yoke"
+          ]
+        }
+      },
+      "primaryMuscles": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "string",
+          "enum": [
+            "abdominals",
+            "abductors",
+            "adductors",
+            "biceps",
+            "calves",
+            "chest",
+            "forearms",
+            "glutes",
+            "hamstrings",
+            "lats",
+            "lower back",
+            "middle back",
+            "neck",
+            "quadriceps",
+            "shoulders",
+            "traps",
+            "triceps"
+          ]
+        }
+      },
+      "secondaryMuscles": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "abdominals",
+            "abductors",
+            "adductors",
+            "biceps",
+            "calves",
+            "chest",
+            "forearms",
+            "glutes",
+            "hamstrings",
+            "lats",
+            "lower back",
+            "middle back",
+            "neck",
+            "quadriceps",
+            "shoulders",
+            "traps",
+            "triceps"
+          ]
+        }
+      },
+      "modality": {
+        "type": "string",
+        "enum": [
+          "strength",
+          "conditioning",
+          "mobility",
+          "power",
+          "skill"
+        ]
+      },
+      "movementPatterns": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "string",
+          "enum": [
+            "squat",
+            "hinge",
+            "lunge",
+            "step_up",
+            "horizontal_push",
+            "vertical_push",
+            "horizontal_pull",
+            "vertical_pull",
+            "carry",
+            "jump",
+            "sprint",
+            "throw",
+            "ballistic",
+            "olympic",
+            "core_flexion",
+            "core_rotation",
+            "core_anti_extension",
+            "core_anti_rotation",
+            "core_anti_lateral_flexion",
+            "locomotion",
+            "mobility"
+          ]
+        }
+      },
+      "laterality": {
+        "type": "string",
+        "enum": [
+          "bilateral",
+          "unilateral",
+          "alternating",
+          "offset"
+        ]
+      },
+      "plane": {
+        "type": "string",
+        "enum": [
+          "sagittal",
+          "frontal",
+          "transverse",
+          "multi"
+        ]
+      },
+      "primaryJoints": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "string",
+          "enum": [
+            "ankle",
+            "knee",
+            "hip",
+            "spine",
+            "shoulder",
+            "elbow",
+            "wrist",
+            "neck",
+            "scapula"
+          ]
+        }
+      },
+      "doseType": {
+        "type": "string",
+        "enum": [
+          "reps",
+          "time",
+          "distance",
+          "intervals",
+          "holds",
+          "contacts"
+        ]
+      },
+      "instructions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "minItems": 0
+      },
+      "images": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "minItems": 0
+      },
+      "musclesDetailed": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "shoulder:anterior_delt",
+            "shoulder:lateral_delt",
+            "shoulder:posterior_delt",
+            "shoulder:rotator_cuff",
+            "chest:upper",
+            "chest:mid",
+            "chest:lower",
+            "back:lats",
+            "back:teres_major",
+            "back:rhomboids",
+            "back:mid_traps",
+            "back:upper_traps",
+            "back:lower_traps",
+            "back:spinal_erectors",
+            "core:rectus_abdominis",
+            "core:obliques",
+            "core:transverse_abdominis",
+            "core:multifidus",
+            "glute:max",
+            "glute:med_min",
+            "hip:flexors",
+            "quad:vastus_medialis",
+            "quad:vastus_lateralis",
+            "quad:rectus_femoris",
+            "hamstring:medial",
+            "hamstring:lateral",
+            "calf:gastroc",
+            "calf:soleus",
+            "shin:tibialis_anterior",
+            "biceps:long_head",
+            "biceps:short_head",
+            "triceps:long_head",
+            "triceps:lateral_head",
+            "triceps:medial_head",
+            "forearm:flexors",
+            "forearm:extensors",
+            "scapula:serratus_anterior"
+          ]
+        }
+      },
+      "reactive": {
+        "type": "boolean"
+      },
+      "description": {
+        "type": "string"
+      }
+    }
+  }
+}
