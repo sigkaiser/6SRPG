@@ -88,7 +88,11 @@ router.post('/register', async (req, res) => {
     await inventory.save();
 
     // Generate token
-    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET || 'dev_secret_do_not_use_in_prod', { expiresIn: '1h' });
+    const jwtSecret = authenticateToken.getJwtSecret();
+    if (!jwtSecret) {
+      return res.status(500).json({ error: 'Server authentication is misconfigured' });
+    }
+    const token = jwt.sign({ userId: newUser._id }, jwtSecret, { expiresIn: '1h' });
 
     res.status(201).json({ message: 'User registered successfully', token, user: { id: newUser._id, username: newUser.username, email: newUser.email } });
   } catch (err) {
@@ -123,7 +127,11 @@ router.post('/login', async (req, res) => {
     const fullUser = await getFullUser(user._id);
 
     // Generate token
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || 'dev_secret_do_not_use_in_prod', { expiresIn: '1h' });
+    const jwtSecret = authenticateToken.getJwtSecret();
+    if (!jwtSecret) {
+      return res.status(500).json({ error: 'Server authentication is misconfigured' });
+    }
+    const token = jwt.sign({ userId: user._id }, jwtSecret, { expiresIn: '1h' });
 
     res.status(200).json({ message: 'Login successful', token, user: fullUser });
   } catch (err) {

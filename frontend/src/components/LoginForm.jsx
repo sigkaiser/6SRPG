@@ -13,7 +13,7 @@ const LoginForm = ({ onLoginSuccess, onSwitchToRegister }) => {
     try {
       const response = await apiLoginUser({ email, password });
       if (response.success && response.user) {
-        loginUser(response.user);
+        loginUser(response.user, response.token);
         if (onLoginSuccess) onLoginSuccess();
       } else {
         setError(response.message || 'Login failed.');

@@ -6,10 +6,13 @@ import {
   getDailyQuests as apiGetDailyQuests
 } from '../services/api';
 
+const TOKEN_STORAGE_KEY = 'token';
+
 const initialState = {
   currentUser: null,
   currentUserDetailedContributions: null, // Added for stat contributions
   isLoadingStats: false, // Added for loading state of stats recalculation
+  isLoading: false,
   exercises: [],
   loadingExercises: false,
   error: null,
@@ -86,12 +89,17 @@ export const GlobalStateProvider = ({ children }) => {
   const [state, dispatch] = useReducer(globalReducer, initialState);
 
   // Actions
-  const loginUser = useCallback((userData) => {
+  const loginUser = useCallback((userData, token) => {
     localStorage.setItem('currentUser', JSON.stringify(userData));
+    if (typeof token === 'string' && token.length > 0) {
+      localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    }
     dispatch({ type: LOGIN_SUCCESS, payload: userData });
   }, []);
 
   const logoutUser = useCallback(() => {
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
     dispatch({ type: LOGOUT });
   }, []);
 

@@ -1,194 +1,169 @@
-const API_BASE_URL = `http://${window.location.hostname}:5000`; // Dynamically set API base URL
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:5000`;
+
+const TOKEN_STORAGE_KEY = 'token';
+
+const getAuthToken = () => localStorage.getItem(TOKEN_STORAGE_KEY);
+
+const buildHeaders = ({ withJson = true, requireAuth = false, extraHeaders = {} } = {}) => {
+  const headers = { ...extraHeaders };
+  if (withJson) headers['Content-Type'] = 'application/json';
+  if (requireAuth) {
+    const token = getAuthToken();
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return headers;
+};
+
+const requestJson = async (path, options = {}) => {
+  const response = await fetch(`${API_BASE_URL}${path}`, options);
+  const data = await response.json().catch(() => ({}));
+  const message = data.message || data.error || 'Request failed.';
+  return { ok: response.ok, status: response.status, data, message };
+};
 
 export const registerUser = async (userData) => {
-  console.log('Attempting to register user:', userData);
   try {
-    const response = await fetch(`${API_BASE_URL}/api/users/register`, {
+    const result = await requestJson('/api/users/register', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: buildHeaders(),
       body: JSON.stringify(userData),
     });
-    const data = await response.json();
-    if (!response.ok) {
-      // Throws an error or returns an error object that the calling code expects
-      // For compatibility with existing error handling in RegistrationForm.jsx which expects { message: ... }
-      return { success: false, message: data.message || 'Registration failed.' };
+    if (!result.ok) {
+      return { success: false, message: result.message };
     }
-    return { success: true, ...data }; // Assuming backend returns { message: '...', user: {...} } on success
+    return { success: true, ...result.data };
   } catch (error) {
-    console.error('Registration API error:', error);
-    return { success: false, message: error.message || 'An network error occurred during registration.' };
+    return {
+      success: false,
+      message: error.message || 'A network error occurred during registration.',
+    };
   }
 };
 
 export const loginUser = async (credentials) => {
-  console.log('Attempting to login with:', credentials);
   try {
-    const response = await fetch(`${API_BASE_URL}/api/users/login`, {
+    const result = await requestJson('/api/users/login', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: buildHeaders(),
       body: JSON.stringify(credentials),
     });
-    const data = await response.json();
-    if (!response.ok) {
-      return { success: false, message: data.message || 'Login failed.' };
+    if (!result.ok) {
+      return { success: false, message: result.message };
     }
-    return { success: true, ...data }; // Assuming backend returns { message: '...', user: {...} }
+    return { success: true, ...result.data };
   } catch (error) {
-    console.error('Login API error:', error);
     return { success: false, message: error.message || 'A network error occurred during login.' };
   }
 };
 
 export const logExercise = async (userId, exerciseData) => {
-  console.log(`[XP LOG] Calling logExercise API for user ${userId} with data:`, exerciseData);
   try {
-    const response = await fetch(`${API_BASE_URL}/api/users/${userId}/exercises`, {
+    const result = await requestJson(`/api/users/${userId}/exercises`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      // Ensure date is included, if not already part of exerciseData from form
+      headers: buildHeaders({ requireAuth: true }),
       body: JSON.stringify({ ...exerciseData, date: exerciseData.date || new Date().toISOString() }),
     });
-    const data = await response.json();
-    console.log('[XP LOG] API response received:', data);
-    if (!response.ok) {
-      console.error('[XP LOG] API response not OK:', response);
-      return { success: false, message: data.message || 'Failed to log exercise.' };
+    if (!result.ok) {
+      return { success: false, message: result.message };
     }
-    // The backend now returns the full user object.
-    // The structure is { success: true, message: '...', user: {...} }
-    return { success: true, ...data };
+    return { success: true, ...result.data };
   } catch (error) {
-    console.error('[XP LOG] Log Exercise API error:', error);
     return { success: false, message: error.message || 'A network error occurred while logging exercise.' };
   }
 };
 
 export const fetchUserExerciseHistory = async (userId) => {
-  console.log(`Fetching exercise history for user ${userId}...`);
   try {
-    const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+    const result = await requestJson(`/api/users/${userId}`, {
       method: 'GET',
-      headers: {
-        // 'Authorization': `Bearer ${localStorage.getItem('token')}`, // If auth is implemented
-      },
+      headers: buildHeaders({ withJson: false, requireAuth: true }),
     });
-    const data = await response.json();
-    if (!response.ok) {
-      return { success: false, message: data.message || 'Failed to fetch user data.' };
+    if (!result.ok) {
+      return { success: false, message: result.message };
     }
-    return { success: true, user: data };
+    return { success: true, user: result.data };
   } catch (error) {
-    console.error('Fetch User Data API error:', error);
     return { success: false, message: error.message || 'A network error occurred while fetching user data.' };
   }
 };
 
 export const recalculateUserStats = async (userId) => {
-  console.log(`Requesting stat recalculation for user ${userId}...`);
   try {
-    const response = await fetch(`${API_BASE_URL}/api/users/${userId}/recalculate-stats`, {
+    const result = await requestJson(`/api/users/${userId}/recalculate-stats`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // 'Authorization': `Bearer ${localStorage.getItem('token')}`, // If auth is implemented
-      },
-      // No body is needed for this POST request as per current design
+      headers: buildHeaders({ requireAuth: true }),
     });
-    const data = await response.json();
-    if (!response.ok) {
-      return { success: false, message: data.message || 'Failed to recalculate stats.' };
+    if (!result.ok) {
+      return { success: false, message: result.message };
     }
-    // Expected response: { message: '...', user: { ... (updated stats), detailedContributions: { ... } } }
-    return { success: true, ...data };
+    return { success: true, ...result.data };
   } catch (error) {
-    console.error('Recalculate Stats API error:', error);
     return { success: false, message: error.message || 'A network error occurred while recalculating stats.' };
   }
 };
 
 export const updateUserPreferences = async (userId, preferences) => {
-  console.log(`Updating preferences for user ${userId}...`);
   try {
-    const response = await fetch(`${API_BASE_URL}/api/users/${userId}/preferences`, {
+    const result = await requestJson(`/api/users/${userId}/preferences`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: buildHeaders({ requireAuth: true }),
       body: JSON.stringify(preferences),
     });
-    const data = await response.json();
-    if (!response.ok) {
-      return { success: false, message: data.message || 'Failed to update preferences.' };
+    if (!result.ok) {
+      return { success: false, message: result.message };
     }
-    return { success: true, ...data };
+    return { success: true, ...result.data };
   } catch (error) {
-    console.error('Update Preferences API error:', error);
     return { success: false, message: error.message || 'A network error occurred while updating preferences.' };
   }
 };
 
 export const getDailyQuests = async (userId) => {
-  console.log(`Fetching daily quests for user ${userId}...`);
   try {
-    const response = await fetch(`${API_BASE_URL}/api/users/${userId}`);
-    const data = await response.json();
-    console.log('Response from getDailyQuests:', data);
-    if (!response.ok) {
-      return { success: false, message: data.message || 'Failed to fetch daily quests.' };
+    const result = await requestJson(`/api/users/${userId}`, {
+      headers: buildHeaders({ withJson: false, requireAuth: true }),
+    });
+    if (!result.ok) {
+      return { success: false, message: result.message };
     }
-    // Return the full user object
-    return { success: true, user: data };
+    return { success: true, user: result.data };
   } catch (error) {
-    console.error('Fetch Daily Quests API error:', error);
     return { success: false, message: error.message || 'A network error occurred while fetching daily quests.' };
   }
 };
 
 export const generateDailyQuests = async (userId) => {
-  console.log(`--- api.js: generateDailyQuests called with userId: ${userId} ---`);
-  const url = `${API_BASE_URL}/api/users/${userId}/daily-quests`;
-  console.log(`Fetching URL: ${url}`);
-
   try {
-    const response = await fetch(url, {
+    const result = await requestJson(`/api/users/${userId}/daily-quests`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: buildHeaders({ requireAuth: true }),
     });
-    const data = await response.json();
-    if (!response.ok) {
-      return { success: false, message: data.message || 'Failed to generate daily quests.' };
+    if (!result.ok) {
+      return { success: false, message: result.message };
     }
-    return { success: true, ...data };
+    return { success: true, ...result.data };
   } catch (error) {
     return { success: false, message: error.message || 'A network error occurred while generating daily quests.' };
   }
 };
 
 const handleQuestAction = async (userId, questId, action, body = null) => {
-  const url = `${API_BASE_URL}/api/users/${userId}/quests/${questId}/${action}`;
   try {
     const options = {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: buildHeaders({ requireAuth: true }),
     };
     if (body) {
       options.body = JSON.stringify(body);
     }
-    const response = await fetch(url, options);
-    const data = await response.json();
-    if (!response.ok) {
-      return { success: false, message: data.message || `Failed to ${action} quest.` };
+    const result = await requestJson(`/api/users/${userId}/quests/${questId}/${action}`, options);
+    if (!result.ok) {
+      return { success: false, message: result.message || `Failed to ${action} quest.` };
     }
-    return { success: true, ...data };
+    return { success: true, ...result.data };
   } catch (error) {
     return { success: false, message: error.message || `A network error occurred while trying to ${action} the quest.` };
   }
@@ -201,14 +176,14 @@ export const completeQuest = (userId, questId, loggedExercises) => handleQuestAc
 
 export const deleteHistory = async (userId, exerciseId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/users/${userId}/exercises/${exerciseId}`, {
+    const result = await requestJson(`/api/users/${userId}/exercises/${exerciseId}`, {
       method: 'DELETE',
+      headers: buildHeaders({ withJson: false, requireAuth: true }),
     });
-    const data = await response.json();
-    if (!response.ok) {
-      return { success: false, message: data.message || 'Failed to delete exercise.' };
+    if (!result.ok) {
+      return { success: false, message: result.message || 'Failed to delete exercise.' };
     }
-    return { success: true, ...data };
+    return { success: true, ...result.data };
   } catch (error) {
     return { success: false, message: error.message || 'A network error occurred while deleting exercise.' };
   }
