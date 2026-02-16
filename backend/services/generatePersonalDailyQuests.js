@@ -1,6 +1,6 @@
 const OpenAI = require('openai');
 const { v4: uuidv4 } = require('uuid');
-const exercises = require('../data/exercises.json');
+const exercises = require('../data/exercises_v2.json');
 const Quest = require('../models/Quest'); // Import Quest model
 
 const DEFAULT_STATS_ORDER = [
@@ -13,12 +13,11 @@ const DEFAULT_STATS_ORDER = [
 ];
 
 const CATEGORY_STAT_MAP = {
-  cardio: 'cardioEndurance',
-  stretching: 'flexibilityMobility',
-  plyometrics: 'powerExplosiveness',
-  'olympic weightlifting': 'powerExplosiveness',
-  powerlifting: 'powerExplosiveness',
-  strongman: 'powerExplosiveness',
+  conditioning: 'cardioEndurance',
+  mobility: 'flexibilityMobility',
+  power: 'powerExplosiveness',
+  skill: 'coreStrength',
+  strength: 'upperBodyStrength',
 };
 
 const GOAL_TO_STATS = {
@@ -75,7 +74,7 @@ const toLowercaseSet = (values = []) => new Set(values.filter(Boolean).map((valu
 
 const categorizeExercise = (exercise) => {
   const stats = [];
-  const categoryKey = (exercise.category || '').toLowerCase();
+  const categoryKey = (exercise.modality || '').toLowerCase();
   const categoryStat = CATEGORY_STAT_MAP[categoryKey];
 
   if (categoryStat) {
@@ -141,8 +140,8 @@ const filterExercisesForUser = (preferences = {}) => {
       return false;
     }
 
-    const equipment = (exercise.equipment || 'body only').toLowerCase();
-    if (excludedEquipmentSet.size && excludedEquipmentSet.has(equipment)) {
+    const equipmentValues = (exercise.equipment || []).map((item) => String(item).toLowerCase());
+    if (excludedEquipmentSet.size && equipmentValues.some((equipment) => excludedEquipmentSet.has(equipment))) {
       return false;
     }
 
@@ -161,8 +160,8 @@ const filterExercisesForUser = (preferences = {}) => {
       if (excludedExerciseNames.has(exercise.name.toLowerCase())) {
         return false;
       }
-      const equipment = (exercise.equipment || 'body only').toLowerCase();
-      if (excludedEquipmentSet.size && excludedEquipmentSet.has(equipment)) {
+      const equipmentValues = (exercise.equipment || []).map((item) => String(item).toLowerCase());
+      if (excludedEquipmentSet.size && equipmentValues.some((equipment) => excludedEquipmentSet.has(equipment))) {
         return false;
       }
       return true;
@@ -211,8 +210,10 @@ const determinePriorityStats = (trainingGoals = []) => {
 const formatExerciseForPrompt = (exercise) => ({
   exerciseId: exercise.id,
   name: exercise.name,
-  equipment: exercise.equipment || 'body only',
-  category: exercise.category,
+  equipment: exercise.equipment || [],
+  modality: exercise.modality,
+  doseType: exercise.doseType,
+  movementPatterns: (exercise.movementPatterns || []).slice(0, 2),
   primaryMuscles: (exercise.primaryMuscles || []).slice(0, 3),
   level: exercise.level,
 });
@@ -341,10 +342,10 @@ const buildPrompt = ({
     '',
     'Important rules:',
     '1. Use only exercises from the allowed list. Copy the provided "name" and include the matching "exerciseId" for each exercise.',
-    '2. Each quest must include 1 to 3 exercises with numeric "sets" and either "reps" (for strength/power work) or "duration" in seconds (for cardio/stretching).',
+    '2. Each quest must include 1 to 3 exercises with numeric "sets" and must respect each exercise "doseType" from the allowed list.',
     '3. Keep recommendations aligned with the user\'s goals, respecting all exclusions and instructions.',
     '4. Return a valid JSON object with a top-level "quests" array. Do not include any extra commentary before or after the JSON.',
-    '5. Each exercise object in the response must include: exerciseId, name, sets, and either reps or duration. weightPercent is optional but, if present, must be a positive number.',
+    '5. Each exercise object in the response must include: exerciseId, name, sets, and either reps or duration. Use reps for doseType values reps/contacts and duration for doseType values time/distance/intervals/holds. weightPercent is optional but, if present, must be a positive number.',
   ];
 
   return promptLines.join('\n');
@@ -405,10 +406,8 @@ const sanitizeExerciseFromModel = (exercise, allowedExerciseMap) => {
 
   const reps = exercise.reps !== undefined ? parsePositiveInteger(exercise.reps) : null;
   const duration = exercise.duration !== undefined ? parsePositiveInteger(exercise.duration) : null;
-  const category = (allowed.exercise.category || '').toLowerCase();
-  const force = (allowed.exercise.force || '').toLowerCase();
-  const isStatic = force === 'static';
-  const requiresDuration = category === 'cardio' || category === 'stretching' || isStatic;
+  const doseType = String(allowed.exercise.doseType || '').toLowerCase();
+  const requiresDuration = ['time', 'distance', 'intervals', 'holds'].includes(doseType);
 
   if (requiresDuration) {
     if (duration === null) {
@@ -422,6 +421,7 @@ const sanitizeExerciseFromModel = (exercise, allowedExerciseMap) => {
     exerciseId: allowed.exercise.id,
     name: allowed.exercise.name,
     sets,
+    doseType: allowed.exercise.doseType,
   };
 
   if (reps !== null) {

@@ -90,6 +90,21 @@ export const fetchUserExerciseHistory = async (userId) => {
   }
 };
 
+export const fetchExerciseCatalog = async () => {
+  try {
+    const result = await requestJson('/api/users/exercise-catalog', {
+      method: 'GET',
+      headers: buildHeaders({ withJson: false }),
+    });
+    if (!result.ok) {
+      return { success: false, message: result.message };
+    }
+    return { success: true, ...result.data };
+  } catch (error) {
+    return { success: false, message: error.message || 'A network error occurred while loading exercise catalog.' };
+  }
+};
+
 export const recalculateUserStats = async (userId) => {
   try {
     const result = await requestJson(`/api/users/${userId}/recalculate-stats`, {

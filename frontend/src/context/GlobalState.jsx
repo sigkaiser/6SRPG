@@ -3,10 +3,12 @@ import React, { createContext, useReducer, useContext, useEffect, useCallback } 
 // Initial state
 import {
   recalculateUserStats as apiRecalculateUserStats,
-  getDailyQuests as apiGetDailyQuests
+  getDailyQuests as apiGetDailyQuests,
+  fetchExerciseCatalog as apiFetchExerciseCatalog,
 } from '../services/api';
 
 const TOKEN_STORAGE_KEY = 'token';
+const EXERCISES_CACHE_KEY = 'adventurers-town-exercises-v2';
 
 const initialState = {
   currentUser: null,
@@ -112,19 +114,20 @@ export const GlobalStateProvider = ({ children }) => {
   const loadExercises = useCallback(async () => {
     dispatch({ type: LOAD_EXERCISES_START });
     try {
-      const localExercises = localStorage.getItem('adventurers-town-exercises');
+      const localExercises = localStorage.getItem(EXERCISES_CACHE_KEY);
       if (localExercises) {
         dispatch({ type: LOAD_EXERCISES_SUCCESS, payload: JSON.parse(localExercises) });
         console.log('Exercises loaded from local storage.');
         return;
       }
 
-      const response = await fetch('https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      const result = await apiFetchExerciseCatalog();
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to load exercise catalog.');
       }
-      const fetchedData = await response.json();
-      localStorage.setItem('adventurers-town-exercises', JSON.stringify(fetchedData));
+
+      const fetchedData = Array.isArray(result.exercises) ? result.exercises : [];
+      localStorage.setItem(EXERCISES_CACHE_KEY, JSON.stringify(fetchedData));
       dispatch({ type: LOAD_EXERCISES_SUCCESS, payload: fetchedData });
       console.log('Exercises fetched and saved.');
     } catch (error) {

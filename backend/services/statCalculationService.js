@@ -1,6 +1,7 @@
 // backend/services/statCalculationService.js
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const exerciseCatalogService = require('./exerciseCatalogService');
 
 const EPLEY_CONSTANT = 30;
 const STAT_CAP_RAW_MAX = 1000; // Max value after initial normalization, before sigmoid
@@ -51,8 +52,46 @@ async function loadStatWeights() {
     }
 }
 
-// Helper function to check if an exercise is relevant to a specific stat
-function isExerciseRelevantForStat(exerciseInfo, camelCaseStatName, statWeights) { //param renamed
+function toWeightKey(value = '') {
+    return String(value).toLowerCase().trim();
+}
+
+function toLegacyEquipmentKeys(equipmentValue) {
+    if (!equipmentValue) return [];
+    const source = Array.isArray(equipmentValue) ? equipmentValue : [equipmentValue];
+    const aliases = new Set();
+
+    const aliasMap = {
+        body_only: ['body only'],
+        foam_roll: ['foam roll'],
+        exercise_ball: ['exercise ball'],
+        medicine_ball: ['medicine ball'],
+        ez_curl_bar: ['e-z curl bar'],
+        cable_stack: ['cable', 'machine'],
+        kettlebell: ['kettlebells'],
+    };
+
+    for (const raw of source) {
+        const key = toWeightKey(raw);
+        aliases.add(key);
+        aliases.add(key.replace(/_/g, ' '));
+        for (const mapped of aliasMap[key] || []) {
+            aliases.add(mapped);
+        }
+    }
+
+    return [...aliases];
+}
+
+function isDurationDoseType(doseType = '') {
+    return ['time', 'distance', 'intervals', 'holds'].includes(toWeightKey(doseType));
+}
+
+function isRepDoseType(doseType = '') {
+    return ['reps', 'contacts'].includes(toWeightKey(doseType));
+}
+
+function isExerciseRelevantForStat(exerciseInfo, camelCaseStatName, statWeights) {
     if (!exerciseInfo || !camelCaseStatName || !statWeights) return false;
 
     // Check primary muscles
@@ -63,12 +102,19 @@ function isExerciseRelevantForStat(exerciseInfo, camelCaseStatName, statWeights)
     for (const muscle of exerciseInfo.secondaryMuscles || []) {
         if (statWeights.muscles?.[muscle]?.[camelCaseStatName]) return true;
     }
-    // Check force
-    if (exerciseInfo.force && statWeights.force?.[exerciseInfo.force.toLowerCase()]?.[camelCaseStatName]) return true;
     // Check mechanic
-    if (exerciseInfo.mechanic && statWeights.mechanic?.[exerciseInfo.mechanic.toLowerCase()]?.[camelCaseStatName]) return true;
-    // Check equipment
-    if (exerciseInfo.equipment && statWeights.equipment?.[exerciseInfo.equipment.toLowerCase()]?.[camelCaseStatName]) return true;
+    if (exerciseInfo.mechanic && statWeights.mechanic?.[toWeightKey(exerciseInfo.mechanic)]?.[camelCaseStatName]) return true;
+    // Check modality and doseType if configured
+    if (exerciseInfo.modality && statWeights.modality?.[toWeightKey(exerciseInfo.modality)]?.[camelCaseStatName]) return true;
+    if (exerciseInfo.doseType && statWeights.doseType?.[toWeightKey(exerciseInfo.doseType)]?.[camelCaseStatName]) return true;
+    // Check movement patterns if configured
+    for (const pattern of exerciseInfo.movementPatterns || []) {
+        if (statWeights.movementPatterns?.[toWeightKey(pattern)]?.[camelCaseStatName]) return true;
+    }
+    // Check equipment array (v2) and legacy aliases
+    for (const equipmentKey of toLegacyEquipmentKeys(exerciseInfo.equipment)) {
+        if (statWeights.equipment?.[equipmentKey]?.[camelCaseStatName]) return true;
+    }
 
     return false;
 }
@@ -101,7 +147,7 @@ async function calculatePotentialStats(userExerciseHistory, exerciseDbData, stat
     const strongestLifts = {}; // Store strongest lift for each exercise type (name)
 
     for (const loggedEx of userExerciseHistory) {
-        if (!loggedEx.type || typeof loggedEx.weight !== 'number' || typeof loggedEx.reps !== 'number') {
+        if (!loggedEx.type) {
             continue;
         }
 
@@ -119,21 +165,30 @@ async function calculatePotentialStats(userExerciseHistory, exerciseDbData, stat
             }
         }
 
-        // Filter by category for 1RM calculation (for potential stats)
-        const RMCategories = ["strength", "powerlifting", "olympic weightlifting", "strongman"];
-        if (!exerciseInfo.category || !RMCategories.includes(exerciseInfo.category.toLowerCase())) {
+        // v2 1RM gating: only rep-based strength/power movements can produce 1RM values.
+        const modality = toWeightKey(exerciseInfo.modality);
+        if (!isRepDoseType(exerciseInfo.doseType) || !['strength', 'power'].includes(modality)) {
             continue;
         }
 
-        const oneRm = calculateOneRm(loggedEx.weight, loggedEx.reps);
+        const firstSet = Array.isArray(loggedEx.sets) ? loggedEx.sets[0] : null;
+        const reps = Number(firstSet?.reps ?? loggedEx.reps);
+        const weight = Number(firstSet?.weight ?? loggedEx.weight);
+        if (!Number.isFinite(weight) || !Number.isFinite(reps) || weight <= 0 || reps <= 0) {
+            continue;
+        }
+
+        const oneRm = calculateOneRm(weight, reps);
         if (!strongestLifts[exerciseInfo.name] || oneRm > strongestLifts[exerciseInfo.name].oneRm) {
             strongestLifts[exerciseInfo.name] = {
                 name: exerciseInfo.name,
                 oneRm: oneRm,
                 primaryMuscles: exerciseInfo.primaryMuscles || [],
                 secondaryMuscles: exerciseInfo.secondaryMuscles || [],
-                force: exerciseInfo.force,
                 mechanic: exerciseInfo.mechanic,
+                modality: exerciseInfo.modality,
+                movementPatterns: exerciseInfo.movementPatterns || [],
+                doseType: exerciseInfo.doseType,
                 level: exerciseInfo.level, // This is difficulty
                 equipment: exerciseInfo.equipment,
             };
@@ -181,15 +236,36 @@ async function calculatePotentialStats(userExerciseHistory, exerciseDbData, stat
             }
         }
 
-        // Other categories: Force, Mechanic, Equipment
-        const otherMetadataCategories = ['force', 'mechanic', 'equipment'];
-        for (const categoryKey of otherMetadataCategories) { // e.g. categoryKey is 'force'
-            const liftPropertyValue = lift[categoryKey]; // e.g. lift.force value like 'push'
-            if (liftPropertyValue && statWeights[categoryKey]?.[liftPropertyValue.toLowerCase()]) {
-                for (const [statName, weight] of Object.entries(statWeights[categoryKey][liftPropertyValue.toLowerCase()])) {
+        // Other categories: mechanic/modality/doseType and movement patterns
+        const categoryPairs = [
+            ['mechanic', lift.mechanic],
+            ['modality', lift.modality],
+            ['doseType', lift.doseType],
+        ];
+        for (const [categoryKey, liftPropertyValue] of categoryPairs) {
+            if (liftPropertyValue && statWeights[categoryKey]?.[toWeightKey(liftPropertyValue)]) {
+                for (const [statName, weight] of Object.entries(statWeights[categoryKey][toWeightKey(liftPropertyValue)])) {
                     if (TRACKED_STATS.includes(statName)) {
                         liftStatContributions[statName] = (liftStatContributions[statName] || 0) + weight;
                     }
+                }
+            }
+        }
+        for (const pattern of lift.movementPatterns || []) {
+            const movementWeights = statWeights.movementPatterns?.[toWeightKey(pattern)];
+            if (!movementWeights) continue;
+            for (const [statName, weight] of Object.entries(movementWeights)) {
+                if (TRACKED_STATS.includes(statName)) {
+                    liftStatContributions[statName] = (liftStatContributions[statName] || 0) + weight;
+                }
+            }
+        }
+        for (const equipmentKey of toLegacyEquipmentKeys(lift.equipment)) {
+            const equipmentWeights = statWeights.equipment?.[equipmentKey];
+            if (!equipmentWeights) continue;
+            for (const [statName, weight] of Object.entries(equipmentWeights)) {
+                if (TRACKED_STATS.includes(statName)) {
+                    liftStatContributions[statName] = (liftStatContributions[statName] || 0) + weight;
                 }
             }
         }
@@ -251,15 +327,6 @@ async function calculatePotentialStats(userExerciseHistory, exerciseDbData, stat
     };
 }
 
-module.exports = {
-    calculatePotentialStats, // Renamed
-    sigmoidScaled,
-    calculateOneRm,
-    loadStatWeights,
-    fetchExerciseDb
-    // XP functions will be added here
-};
-
 // --- XP and Progression Functions ---
 
 // Scaling function for XP needed for next stat increment
@@ -275,42 +342,48 @@ function calculateXpForExercise(loggedExercise, exerciseMetadata, statWeights, s
     const awardedXp = TRACKED_STATS.reduce((acc, stat) => ({ ...acc, [stat]: 0 }), {});
     if (!loggedExercise || !exerciseMetadata || !statWeights) return awardedXp;
 
-    const { category, sets, duration } = loggedExercise;
+    const { sets = [], duration } = loggedExercise;
     const difficultyMultiplier = getDifficultyMultiplier(exerciseMetadata);
     const statWeighting = calculateStatWeighting(exerciseMetadata, statWeights);
+    const doseType = toWeightKey(exerciseMetadata.doseType);
 
-    if (category === 'Lift' && sets) {
+    if (isRepDoseType(doseType) && sets.length > 0) {
         const exerciseCanonicalName = exerciseMetadata.name;
         const userBest1RM = strongestLiftsByExercise?.[exerciseCanonicalName]?.oneRm ?? 0;
 
         sets.forEach(set => {
             const { weight, reps } = set;
-            if (weight === undefined || reps === undefined) return;
-
-            const currentLift1RM = calculateOneRm(weight, reps);
-            const effortFactor = userBest1RM > 0 ? Math.min(1.0, currentLift1RM / userBest1RM) : 1.0;
-            const baseXP = 5; // Per set
+            if (reps === undefined) return;
+            const safeReps = Number(reps);
+            if (!Number.isFinite(safeReps) || safeReps <= 0) return;
+            const safeWeight = Number(weight);
+            const canComputeRm = Number.isFinite(safeWeight) && safeWeight > 0;
+            const currentLift1RM = canComputeRm ? calculateOneRm(safeWeight, safeReps) : 0;
+            const effortFactor = canComputeRm && userBest1RM > 0 ? Math.min(1.0, currentLift1RM / userBest1RM) : 1.0;
+            const baseXP = doseType === 'contacts' ? 4 : 5;
             const xpForSet = baseXP * difficultyMultiplier * effortFactor;
 
             for (const statName in statWeighting) {
                 awardedXp[statName] += xpForSet * statWeighting[statName];
             }
         });
-    } else if (category === 'Stretch' && sets) {
-        sets.forEach(set => {
-            if (set.duration === undefined) return;
-            // XP = 10 * (duration in seconds / 30) * difficultyMultiplier * statWeight
-            const xpForSet = 10 * (set.duration / 30) * difficultyMultiplier;
+    } else if (isDurationDoseType(doseType)) {
+        const durations = sets
+            .map((set) => Number(set.duration))
+            .filter((val) => Number.isFinite(val) && val > 0);
+        if (!durations.length && Number.isFinite(Number(duration)) && Number(duration) > 0) {
+            durations.push(Number(duration));
+        }
+        durations.forEach((seconds) => {
+            const modalityBonus = toWeightKey(exerciseMetadata.modality) === 'conditioning' ? 1.2 : 1.0;
+            const xpForSet = 8 * (seconds / 30) * difficultyMultiplier * modalityBonus;
             for (const statName in statWeighting) {
                 awardedXp[statName] += xpForSet * statWeighting[statName];
             }
         });
-    } else if (category === 'Cardio' && duration) {
-        const mets = exerciseMetadata.mets || 7; // Use 7 if not defined
-        // XP = 25 * (duration in minutes / 60) * (METs / 10) * difficultyMultiplier * statWeight
-        const xpForCardio = 25 * (duration / 60) * (mets / 10) * difficultyMultiplier;
+    } else if (sets.length > 0) {
         for (const statName in statWeighting) {
-            awardedXp[statName] += xpForCardio * statWeighting[statName];
+            awardedXp[statName] += 3 * difficultyMultiplier * statWeighting[statName];
         }
     }
 
@@ -334,7 +407,7 @@ function calculateStatWeighting(exerciseMetadata, statWeights) {
     const weighting = TRACKED_STATS.reduce((acc, stat) => ({ ...acc, [stat]: 0 }), {});
 
     const applyWeight = (category, key, multiplier = 1) => {
-        const weights = statWeights[category]?.[key.toLowerCase()];
+        const weights = statWeights[category]?.[toWeightKey(key)];
         if (weights) {
             for (const statName in weights) {
                 if (weighting.hasOwnProperty(statName)) {
@@ -346,9 +419,11 @@ function calculateStatWeighting(exerciseMetadata, statWeights) {
 
     (exerciseMetadata.primaryMuscles || []).forEach(muscle => applyWeight('muscles', muscle, 1));
     (exerciseMetadata.secondaryMuscles || []).forEach(muscle => applyWeight('muscles', muscle, 0.5));
-    if (exerciseMetadata.force) applyWeight('force', exerciseMetadata.force);
     if (exerciseMetadata.mechanic) applyWeight('mechanic', exerciseMetadata.mechanic);
-    if (exerciseMetadata.equipment) applyWeight('equipment', exerciseMetadata.equipment);
+    if (exerciseMetadata.modality) applyWeight('modality', exerciseMetadata.modality);
+    if (exerciseMetadata.doseType) applyWeight('doseType', exerciseMetadata.doseType);
+    (exerciseMetadata.movementPatterns || []).forEach(pattern => applyWeight('movementPatterns', pattern, 0.75));
+    toLegacyEquipmentKeys(exerciseMetadata.equipment).forEach(equipment => applyWeight('equipment', equipment));
 
     return weighting;
 }
@@ -395,12 +470,10 @@ function applyXpAndLevelUp(currentUserStats, awardedXpMap) {
 
 // Helper function to fetch the exercise DB data
 async function fetchExerciseDb() {
-    const exercisesPath = path.join(__dirname, '../data/exercises.json');
     try {
-        const data = await fs.readFile(exercisesPath, 'utf8');
-        return JSON.parse(data);
+        return await exerciseCatalogService.getExercises();
     } catch (error) {
-        console.error('Error loading exercises.json:', error);
+        console.error('Error loading exercises_v2.json:', error);
         throw new Error('Could not load exercise database.');
     }
 }

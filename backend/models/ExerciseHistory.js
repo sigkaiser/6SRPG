@@ -4,16 +4,19 @@ const { Schema } = mongoose;
 const SetSchema = new Schema({
   reps: { type: Number },
   weight: { type: Number },
-  duration: { type: Number } // in seconds for stretching
+  duration: { type: Number } // duration-like set value (seconds for time/holds/intervals)
 }, { _id: false });
 
 const ExerciseLogSchema = new Schema({
   date: { type: Date, default: Date.now },
+  exerciseId: { type: String },
   type: String, // e.g., "Push-ups", "Barbell Squat"
-  category: String, // "Lift", "Stretch", "Cardio"
+  category: String,
+  modality: String,
+  doseType: String,
   sets: [SetSchema],
-  duration: { type: Number }, // in minutes for cardio
-  intensity: { type: Number } // METs for cardio
+  duration: { type: Number }, // canonical duration-like value (seconds for time/holds/intervals)
+  intensity: { type: Number }
 });
 
 const ExerciseHistorySchema = new Schema({

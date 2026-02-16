@@ -3,6 +3,8 @@ import { useGlobalState } from '../context/GlobalState';
 import { deleteHistory } from '../services/api';
 import pageBg from '../../assets/page.png';
 
+const DURATION_DOSE_TYPES = ['time', 'distance', 'intervals', 'holds'];
+
 const ExerciseHistory = () => {
   const { currentUser, updateUser } = useGlobalState();
   const [selectedEntry, setSelectedEntry] = useState(null);
@@ -57,6 +59,26 @@ const ExerciseHistory = () => {
     setCurrentPage((prev) => (prev - 1 + pageCount) % pageCount);
   };
 
+  const renderEntryDetails = (entry) => {
+    const doseType = String(entry.doseType || '').toLowerCase();
+    const usesDuration = DURATION_DOSE_TYPES.includes(doseType);
+
+    if (Array.isArray(entry.sets) && entry.sets.length > 0) {
+      return entry.sets.map((set, index) => {
+        if (usesDuration || set.duration !== undefined) {
+          return <p key={index}>Set {index + 1}: {set.duration ?? '-'} seconds</p>;
+        }
+        return <p key={index}>Set {index + 1}: {set.reps ?? '-'} reps{set.weight !== undefined && set.weight !== null ? ` @ ${set.weight}` : ''}</p>;
+      });
+    }
+
+    if (usesDuration || entry.duration !== undefined) {
+      return <p>Duration: {entry.duration ?? '-'} seconds</p>;
+    }
+
+    return <p>No detailed data captured.</p>;
+  };
+
   return (
     <div
       className="w-full max-w-2xl p-8 text-gray-800"
@@ -84,16 +106,11 @@ const ExerciseHistory = () => {
                 <p className="font-semibold">
                   {entry.type} - {new Date(entry.date).toLocaleDateString()}
                 </p>
+                <p className="text-xs uppercase tracking-wide text-gray-600">
+                  {(entry.modality || entry.category || 'unknown')} / {(entry.doseType || 'n/a')}
+                </p>
                 <div className="pl-4 text-sm">
-                  {entry.category === 'Lift' && entry.sets.map((set, sIndex) => (
-                    <p key={sIndex}>Set {sIndex + 1}: {set.reps} reps at {set.weight} lbs</p>
-                  ))}
-                  {entry.category === 'Stretch' && entry.sets.map((set, sIndex) => (
-                     <p key={sIndex}>Set {sIndex + 1}: {set.duration} seconds</p>
-                  ))}
-                  {entry.category === 'Cardio' && (
-                    <p>Duration: {entry.duration} minutes, Intensity: {entry.intensity}</p>
-                  )}
+                  {renderEntryDetails(entry)}
                 </div>
               </div>
               {selectedEntry === entry._id && (

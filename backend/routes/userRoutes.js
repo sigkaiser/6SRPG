@@ -7,8 +7,38 @@ const ExerciseHistory = require('../models/ExerciseHistory');
 const Inventory = require('../models/Inventory');
 const Quest = require('../models/Quest');
 const authenticateToken = require('../middleware/authMiddleware');
+const exerciseCatalogService = require('../services/exerciseCatalogService');
 
 const router = express.Router();
+
+function isDurationDoseType(doseType = '') {
+  const normalized = String(doseType).toLowerCase();
+  return ['time', 'distance', 'intervals', 'holds'].includes(normalized);
+}
+
+function isRepDoseType(doseType = '') {
+  const normalized = String(doseType).toLowerCase();
+  return ['reps', 'contacts'].includes(normalized);
+}
+
+const parsePositiveInt = (value, fallback = null) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return fallback ?? null;
+  }
+  return Math.round(numeric);
+};
+
+const parseNonNegativeNumber = (value, fallback = null) => {
+  if (value === undefined || value === null || value === '') {
+    return fallback ?? null;
+  }
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return fallback ?? null;
+  }
+  return Math.round(numeric * 100) / 100;
+};
 
 function isE2eAuthHelperEnabled() {
   const nodeEnv = String(process.env.NODE_ENV || '').trim().toLowerCase();
@@ -245,6 +275,17 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// GET /api/users/exercise-catalog
+router.get('/exercise-catalog', async (req, res) => {
+  try {
+    const catalog = await exerciseCatalogService.getCatalogForClient();
+    return res.status(200).json(catalog);
+  } catch (err) {
+    console.error('Failed to load exercise catalog:', err);
+    return res.status(500).json({ error: 'Failed to load exercise catalog' });
+  }
+});
+
 // GET /api/users/:id
 router.get('/:id', authenticateToken, async (req, res) => {
   console.log(`Fetching data for user ${req.params.id}...`);
@@ -332,37 +373,11 @@ router.post('/:id/exercises', authenticateToken, async (req, res) => {
     const playerStatsDoc = await PlayerStats.findOne({ user: userId });
     if (!playerStatsDoc) return res.status(404).json({ error: 'Player Stats not found' });
 
-    const { type, category, sets, duration, date } = req.body;
+    const { exerciseId, sets = [], duration, date } = req.body;
 
-    if (!type || !category) {
-      return res.status(400).json({ error: 'Missing required fields: type, category' });
+    if (!exerciseId) {
+      return res.status(400).json({ error: 'Missing required field: exerciseId' });
     }
-
-    const loggedExercise = {
-      type,
-      category,
-      date: date ? new Date(date) : new Date(),
-    };
-
-    if (category === 'Lift' || category === 'Stretch') {
-      if (!Array.isArray(sets) || sets.length === 0) {
-        return res.status(400).json({ error: 'Sets are required for Lift and Stretch exercises.' });
-      }
-      loggedExercise.sets = sets;
-    } else if (category === 'Cardio') {
-      if (duration === undefined) {
-        return res.status(400).json({ error: 'Duration is required for Cardio exercises.' });
-      }
-      loggedExercise.duration = duration;
-      // In the future, METs will be added to exercises.json and used here
-      loggedExercise.intensity = 7; // Placeholder
-    } else {
-      return res.status(400).json({ error: 'Invalid exercise category.' });
-    }
-
-    // Push to history
-    exerciseHistoryDoc.history.push(loggedExercise);
-    // await exerciseHistoryDoc.save(); // Don't save yet, wait for stats (or save now? logic said wait)
 
     // --- Begin Stat and XP Processing ---
     console.log('[XP LOG] Starting stat and XP processing.');
@@ -373,6 +388,55 @@ router.post('/:id/exercises', authenticateToken, async (req, res) => {
         await exerciseHistoryDoc.save();
         return res.status(503).json({ error: 'Exercise database is currently unavailable or empty. Exercise logged but stats not updated.' });
     }
+    const exerciseMetadata = exerciseDbData.find((ex) => ex.id === exerciseId);
+    if (!exerciseMetadata) {
+      return res.status(400).json({ error: `Unknown exerciseId: ${exerciseId}` });
+    }
+
+    const doseType = String(exerciseMetadata.doseType || '').toLowerCase();
+    const requiresDuration = isDurationDoseType(doseType);
+    const usesReps = isRepDoseType(doseType);
+
+    const loggedExercise = {
+      exerciseId: exerciseMetadata.id,
+      type: exerciseMetadata.name,
+      modality: exerciseMetadata.modality,
+      doseType: exerciseMetadata.doseType,
+      category: exerciseMetadata.modality,
+      date: date ? new Date(date) : new Date(),
+    };
+
+    if (requiresDuration) {
+      const durationSets = (Array.isArray(sets) ? sets : [])
+        .map((set) => ({ duration: parsePositiveInt(set?.duration) }))
+        .filter((set) => set.duration !== null);
+
+      if (durationSets.length > 0) {
+        loggedExercise.sets = durationSets;
+        loggedExercise.duration = durationSets.reduce((sum, set) => sum + set.duration, 0);
+      } else if (parsePositiveInt(duration) !== null) {
+        loggedExercise.duration = parsePositiveInt(duration);
+      } else {
+        return res.status(400).json({ error: `Duration is required for exercise doseType "${doseType}".` });
+      }
+    } else if (usesReps) {
+      const repSets = (Array.isArray(sets) ? sets : [])
+        .map((set) => ({
+          reps: parsePositiveInt(set?.reps),
+          weight: parseNonNegativeNumber(set?.weight),
+        }))
+        .filter((set) => set.reps !== null);
+
+      if (!repSets.length) {
+        return res.status(400).json({ error: `At least one set with reps is required for doseType "${doseType}".` });
+      }
+      loggedExercise.sets = repSets;
+    } else {
+      return res.status(400).json({ error: `Unsupported exercise doseType "${doseType}".` });
+    }
+
+    // Push to history once the log payload is fully validated.
+    exerciseHistoryDoc.history.push(loggedExercise);
 
     const statWeights = await statCalculationService.loadStatWeights();
     if (!statWeights) {
@@ -424,7 +488,6 @@ router.post('/:id/exercises', authenticateToken, async (req, res) => {
 
     // 3. Calculate XP for the logged exercise
     console.log('[XP LOG] Calculating XP for the logged exercise.');
-    const exerciseMetadata = exerciseDbData.find(ex => ex.name.toLowerCase() === loggedExercise.type.toLowerCase());
     let awardedXpMap = {};
     if (exerciseMetadata) {
         awardedXpMap = statCalculationService.calculateXpForExercise(loggedExercise, exerciseMetadata, statWeights, strongestLiftsByExercise);
@@ -701,25 +764,6 @@ const handleQuestAction = async (req, res, newStatus) => {
         questExerciseByName.set((questExercise.name || '').toLowerCase(), questExercise);
       }
 
-      const parsePositiveInt = (value, fallback = null) => {
-        const numeric = Number(value);
-        if (!Number.isFinite(numeric) || numeric <= 0) {
-          return fallback ?? null;
-        }
-        return Math.round(numeric);
-      };
-
-      const parseNonNegativeNumber = (value, fallback = null) => {
-        if (value === undefined || value === null || value === '') {
-          return fallback ?? null;
-        }
-        const numeric = Number(value);
-        if (!Number.isFinite(numeric) || numeric < 0) {
-          return fallback ?? null;
-        }
-        return Math.round(numeric * 100) / 100;
-      };
-
       const sanitizedLoggedExercises = [];
 
       for (const logged of loggedExercises) {
@@ -758,20 +802,6 @@ const handleQuestAction = async (req, res, newStatus) => {
         const exerciseDbById = new Map(exerciseDbData.map(e => [e.id, e]));
         const exerciseDbByName = new Map(exerciseDbData.map(e => [e.name.toLowerCase(), e]));
 
-        const categorize = (cat) => {
-          const c = (cat || '').toLowerCase();
-          if ([
-            'powerlifting',
-            'strength',
-            'olympic weightlifting',
-            'strongman',
-            'plyometrics',
-          ].includes(c)) return 'Lift';
-          if (c === 'stretching') return 'Stretch';
-          if (c === 'cardio') return 'Cardio';
-          return 'Lift';
-        };
-
         const newExerciseEntries = [];
 
         for (const ex of sanitizedLoggedExercises) {
@@ -782,16 +812,22 @@ const handleQuestAction = async (req, res, newStatus) => {
           if (!metadata) continue;
 
           ex.exerciseId = metadata.id;
-          const category = categorize(metadata.category);
-          const entry = { date: new Date(), type: metadata.name, category };
+          const entry = {
+            date: new Date(),
+            exerciseId: metadata.id,
+            type: metadata.name,
+            modality: metadata.modality,
+            doseType: metadata.doseType,
+            category: metadata.modality,
+          };
           const setsCount = Math.max(1, ex.sets || 1);
+          const doseType = String(metadata.doseType || '').toLowerCase();
 
-          if (category === 'Lift') {
+          if (isRepDoseType(doseType)) {
             entry.sets = Array.from({ length: setsCount }, () => ({ reps: ex.reps ?? null, weight: ex.weight ?? null }));
-          } else if (category === 'Stretch') {
+          } else if (isDurationDoseType(doseType)) {
             entry.sets = Array.from({ length: setsCount }, () => ({ duration: ex.duration ?? null }));
-          } else if (category === 'Cardio') {
-            entry.duration = ex.duration ? ex.duration / 60 : 0; // seconds to minutes
+            entry.duration = ex.duration ?? null;
           }
 
           if (!exerciseHistoryDoc.history) exerciseHistoryDoc.history = [];
